@@ -9,9 +9,9 @@ print('Starting Twitch ON AIR Service...')
 print('/////////////////////////////////')
 print(' ')
 
-##### This is to try to catch boot neopixel errors
-import RPi.GPIO as GPIO
-GPIO.cleanup()
+##### This is to try to catch boot neopixel errors - didn't work so it's commented out for now
+#import RPi.GPIO as GPIO
+#GPIO.cleanup()
 
 import os
 import requests #For making cURL requests
