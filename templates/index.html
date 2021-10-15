@@ -34,7 +34,7 @@
 <!-- Form -->
 <div class="form">
 
-<form action="/" method="POST">
+<form action="/" method="POST" onsubmit="return confirm('Save Changes?');">
 
 <h4>Basic:</h4>
 
@@ -115,7 +115,7 @@
 <h2 class="subheader">Troubleshooting</h2>
 
 <div class="buttonsHolder">
-<form action="/restartled" method="POST">
+<form action="/restartled" method="POST" onsubmit="return confirm('Restart LEDs?');">
 <input class="button" type="submit" id="restartled" name = "restartled" value="Restart LEDs">
 </form>
 
@@ -123,15 +123,15 @@
 <input type="submit" id="killled" name = "killled" value="Turn Off LEDs">
 </form>--> <!-- Probably not a good idea to let the user handle this one -->
 
-<form action="/restart" method="POST">
+<form action="/restart" method="POST" onsubmit="return confirm('Restart Device? Restarting will take a minute.');">
 <input class="button" type="submit" id="restart" name = "restart" value="Restart Device">
 </form>
 
-<form action="/reset" method="POST">
+<form action="/reset" method="POST" onsubmit="return confirm('Reset configuration to defaults? This action cannot be undone.');">
 <input class="button" type="submit" id="reset" name = "reset" value="Reset">
 </form>
 
-<form action="/deltoken" method="POST">
+<form action="/deltoken" method="POST" onsubmit="return confirm('Refresh the Twitch App Access token? This can fix some authentication issues.');">
 <input class="button" type="submit" id="deltoken" name = "deltoken" value="Refresh Token">
 </form>
 </div><!--form-->

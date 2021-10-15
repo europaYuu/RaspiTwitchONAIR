@@ -203,7 +203,7 @@ def tryLoadConfig():
         print('Default Configuration File Created.')
 
 def writeChangeFile():
-    f = open("twitch_onair_config_updated.txt", "w")
+    f = open("temp/twitch_onair_config_updated.txt", "w")
     f.write("temp")
     f.close()
 

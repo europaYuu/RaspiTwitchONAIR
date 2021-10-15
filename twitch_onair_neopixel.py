@@ -91,7 +91,7 @@ TARGET_FRAMERATE = 20 # For effects that take a time input
 
 # Debug Log. set to True if you want debug file output
 ENABLE_DEBUG_LOG = False
-DEBUG_LOG_FILENAME = 'twitch_onair_neopixel_log.txt'
+DEBUG_LOG_FILENAME = 'logs/twitch_onair_neopixel_log.txt'
 
 #######################################
 ########## END CONFIGURATION ##########
@@ -577,9 +577,9 @@ def createTokenFile():
 	time.sleep(1.0) #delay this so the user can tell what's happening; no longer needed once we play a proper animation later
 
 def checkConfigUpdate():
-	changed = os.path.isfile('twitch_onair_config_updated.txt')
+	changed = os.path.isfile('temp/twitch_onair_config_updated.txt')
 	if changed:
-		os.remove('twitch_onair_config_updated.txt')
+		os.remove('temp/twitch_onair_config_updated.txt')
 	return changed	
 
 def isLive(user_login):
