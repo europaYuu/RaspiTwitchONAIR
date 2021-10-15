@@ -9,11 +9,6 @@ print('Starting Twitch ON AIR Service...')
 print('/////////////////////////////////')
 print(' ')
 
-###### store PID so it can be killed easily by the webserver
-import pid #store PID in file so webserver can kill if needed
-pid.writePID('neopixel') #filename is referenced by twitch_onair_webserver - make sure these are synchronized
-
-
 ##### This is to try to catch boot neopixel errors
 import RPi.GPIO as GPIO
 GPIO.cleanup()
@@ -26,6 +21,9 @@ import json
 import time
 import random
 import traceback
+
+###### store PID so it can be killed easily by the webserver
+import pid #store PID in file so webserver can kill if needed
 
 ###### neopixels
 import board
@@ -55,6 +53,12 @@ json_datetime = json.dumps(formatted_datetime)
 
 #define here to make it global scope
 app_access_token = ''
+
+# Catching "Connection Refused" Errors
+# How many seconds to wait if server refuses our connection?
+CONNREFUSE_WAIT_TIME = 30
+CONNREFUSE_MAX_LOOPS = 10
+CONNREFUSE_Loop = 0 #Initialize the loop count
 
 ###### Defaults ######
 
@@ -614,13 +618,28 @@ def isLive(user_login):
 		}
 
 		url = 'https://api.twitch.tv/helix/streams?user_login=' + user_login
-		response = requests.get(url, headers=headers)
-		ResponseJson = response.json()
+		try:
+			response = requests.get(url, headers=headers)
+			ResponseJson = response.json()
 
-		if 'data' in ResponseJson:
-			return len(ResponseJson['data'])
-		else:
-			return (-1)
+			if 'data' in ResponseJson:
+				return len(ResponseJson['data'])
+			else:
+				return (-1)
+		except:
+			if CONNREFUSE_Loop < CONNREFUSE_MAX_LOOPS:
+				printLog("Connection Refused by the server... Sleeping for " + CONNREFUSE_WAIT_TIME + "seconds. This is attempt " + CONNREFUSE_Loop + "/" + CONNREFUSE_MAX_LOOPS + ". Neopixel service will restart when CONNREFUSE_MAX_LOOPS is reached.")
+				CONNREFUSE_Loop += 1
+				
+				# Extra careful here just in case user injects a bad time into this part
+				wait_time = (CONNREFUSE_WAIT_TIME - clamp( update_interval, 0.5, update_interval+0.5 ))
+				wait_time_clamped = clamp(wait_time, 0.5, wait_time)
+				
+				time.sleep( wait_time_clamped )
+				printLog("Continuing with next connection...")
+				return (-2)
+			else:
+				os.system('python3 twitch_onair_neopixel.py')
 
 	else:
 		return (-2)
@@ -651,6 +670,23 @@ def stopLive():
 ###### debug
 # Uncomment below if you just want to print to terminal
 #debugLive(twitch_user_login)
+
+##### Startup
+
+# Only allow a single instance of this
+def tryKillNeopixelService():
+    print('twitch_onair_neopixel: Killing Neopixel Service...')
+    pidResult = pid.tryReadPID('neopixel')
+    if pidResult >= 0:
+        os.system('sudo kill ' + str(pidResult))
+        pixelClear()
+        pid.delPID('neopixel')
+    else:
+        pass
+
+tryKillNeopixelService()
+
+pid.writePID('neopixel') #filename is referenced by twitch_onair_webserver - make sure these are synchronized
 
 pixelStart()
 
@@ -689,7 +725,7 @@ if enable_main:
 	        	pixelError()
 
 	        previous_live = live
-	        update_interval = clamp(update_interval, 0.5, update_interval) # Clamp minimum to not kill CPu
+	        update_interval = clamp(update_interval, 0.5, update_interval+0.5 ) # Clamp minimum to not kill CPu
 	        
 	        time.sleep(update_interval) # Delay in the loop to not kill CPU
 	        

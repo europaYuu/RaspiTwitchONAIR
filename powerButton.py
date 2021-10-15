@@ -6,6 +6,11 @@ import pid #Used to killing webserver / neopixel service
 
 print('powerButton script Running')
 
+print('\n////////////////////////////////')
+print('Starting Power Button Service...')
+print('////////////////////////////////')
+print(' ')
+
 GPIO.setmode(GPIO.BCM) # Broadcom pin numbers
 GPIO.setup(26, GPIO.IN, pull_up_down=GPIO.PUD_UP) # Pin 26 = reset button
 
