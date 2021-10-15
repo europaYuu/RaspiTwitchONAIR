@@ -1,0 +1,224 @@
+html {
+	background-color: #070a0d;
+}
+
+.gradient {
+	min-height: 100%;
+    -webkit-background-size: cover;
+    -moz-background-size: cover;
+    -o-background-size: cover;
+    background-size: cover;
+    background: ##070a0d;
+    background-repeat:no-repeat;
+    background: linear-gradient(rgba(0,0,0,0), rgba(0,0,0,0.2), rgba(2,8,18,0.3), rgba(28,34,64,0.8), rgba(75,0,180,0.9));
+    background: linear-gradient(rgba(0,0,0,0), rgba(0,0,0,0.2), rgba(2,8,18,0.3), rgba(28,34,64,0.8), rgba(75,0,180,0.9));
+    background: linear-gradient(rgba(0,0,0,0), rgba(0,0,0,0.2), rgba(2,8,18,0.3), rgba(28,34,64,0.8), rgba(75,0,180,0.9));
+    background: linear-gradient(rgba(0,0,0,0), rgba(0,0,0,0.2), rgba(2,8,18,0.3), rgba(28,34,64,0.8), rgba(75,0,180,0.9));
+    background: linear-gradient(rgba(0,0,0,0), rgba(0,0,0,0.2), rgba(2,8,18,0.3), rgba(28,34,64,0.8), rgba(75,0,180,0.9));
+}
+
+.holder {
+	display: block;
+	margin: auto;
+	width: 80%;
+	min-width: 300px;
+	max-width:  600px;
+	padding-top: 10px;
+	padding-bottom: 40px;
+	padding-left: 20px;
+	padding-right: 20px;
+	margin-top: 20px;
+}
+
+.subholder {
+	background-color: mintcream;
+	padding: 0px;
+	border-radius: 24px;
+	padding-top: 1px;
+}
+
+.form {
+	background-color: white;
+	padding: 20px 5px;
+	padding-top: 4px;
+	border-radius: 12px;
+	border-width: 2px;
+	border: solid;
+	border-color: lightsteelblue;
+	margin: 16px;
+}
+body {
+	font-family: 'Quicksand', sans-serif;
+	font-size: 13pt;
+	margin: 0;
+	padding: 0;
+}
+
+.lighttext {
+	color: white;
+
+}
+
+h1 {
+	font-family: 'Comfortaa', cursive;
+	font-size:36pt;
+	text-align: center;
+	color: mintcream;
+	margin-bottom: 4px;
+}
+
+h2 {
+	font-family: 'Comfortaa', cursive;
+	font-size:24pt;
+	text-align: center;
+	color: darkslateblue;
+	margin-bottom: 2px;
+}
+
+h4 {
+	text-align: center;
+	margin-top: 20px;
+	margin-bottom: 12px;
+	font-size:  14pt;
+	color: darkslateblue;
+}
+.fieldHolder {
+	overflow: hidden;
+	padding-top: 4px;
+}
+
+.fieldHolder span {
+	overflow: hidden;
+	padding:  0 5px;
+}
+
+.fieldHolder input {
+	width:  100%;
+	border-color: lightgray;
+	border: solid;
+	border-width: 1px;
+	border-radius: 4px;
+	background-color: aliceblue;
+}
+
+.fieldHolder label {
+	float: left;
+	min-width:  120px;
+	width: 30%;
+	text-overflow: ellipsis;
+	white-space: nowrap;
+	overflow: hidden;
+	padding: 8px 10px;
+}
+
+.fieldHolder span {
+    display: block;
+    overflow: hidden;
+    padding: 0 5px;
+}
+
+.fieldHolder input { 
+    -moz-box-sizing: border-box;
+    -webkit-box-sizing: border-box;
+    box-sizing: border-box;
+}
+
+input[type=text], input[type=number], input[type=password] {
+	padding: 8px 20px;
+	box-sizing:  border-box;
+	margin-bottom: 8px;
+	border-radius: 8px;
+	border: solid;
+	border-width: 2px;
+	border-color: #e3fae5;
+	background-color: #e3fae5;
+	font-family: 'Quicksand', sans-serif;
+	font-size: 16px;
+}
+
+input[type=range] {
+	padding: 8px 0px;
+}
+
+/*input[type=text]:hover, input[type=number]:hover, input[type=password]:hover {
+	border: solid;
+	border-color: orange;
+}
+
+input[type=text]:focus, input[type=number]:focus, input[type=password]:focus {
+	border: solid;
+	border-color: orange;
+}*/
+
+input[type=color] {
+	border-style: none;
+	padding: 2px 4px;
+}
+
+.buttonsHolder {
+	background-color: darkslateblue;
+	margin: auto;
+	width: 100%;
+	text-align: center;
+	border-bottom-right-radius: 22px;
+	border-bottom-left-radius: 22px;
+	padding:  48px 0px;
+	padding-top:  12px;
+}
+
+.buttonsHolder form {
+	display: inline-block;
+	padding: 10px 2px;
+}
+
+.saveButtonHolder {
+	display: inline-block;
+	width: 100%;
+	margin: auto;
+	text-align: center;
+	margin-top: 12px;
+	margin-bottom: 12px;
+}
+
+.button {
+	background-color: white;
+	padding: 10px 16px;
+	cursor:  pointer;
+	font-family: 'Comfortaa', cursive;
+	font-size: 16pt;
+	width: 200px;
+	border-radius: 30px;
+	border: none;
+	border-color: dimgray;
+	text-align: center;
+	text-overflow: ellipsis;
+	overflow: hidden;
+	color: darkslateblue;
+}
+
+.button-dark {
+	background-color: darkslateblue;
+	color: white;
+}
+
+.button:hover {
+	background-color: orange;
+}
+
+.saveButton {
+	background-color: darkslateblue;
+	padding: 24px 10px;
+	cursor:  pointer;
+	font-family: 'Comfortaa', cursive;
+	font-size: 24pt;
+	border-radius: 50px;
+	border: none;
+	border-color: dimgray;
+	width: 80%;
+	text-align: center;
+	color: white;
+}
+
+.saveButton:hover {
+	background-color: orange;
+}

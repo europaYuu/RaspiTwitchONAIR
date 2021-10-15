@@ -1,0 +1,510 @@
+# Get Stream Status from Twitch - Webserver
+#
+# Requires registration of a Twitch Application. For more information, go to https://dev.twitch.tv/docs/api/ "Getting Started with the Twitch API". Leaving OAuth Redirect URL to http://localhost seems to work, but please let me know on twitter if this is bad practice.
+# This script uses the OAuth Client Credentials Flow, which doesn't require a UI to authenticate
+
+print('\n///////////////////////////////////')
+print('Starting Twitch ON AIR WebServer...')
+print('///////////////////////////////////')
+print(' ')
+
+###### store PID so it can be killed easily by the powerButton.py
+import pid #store PID in file so webserver can kill if needed
+pid.writePID('webserver') #filename is referenced by powerButton - make sure these are synchronized
+
+import os
+from flask import Flask, render_template, request, url_for, redirect, send_from_directory
+import json
+import time
+import socket
+import pid
+
+###### Misc
+def clamp(n, smallest, largest): return max(smallest, min(n, largest))
+def saturate(n): return clamp(n, 0,255) # I miss HLSL
+
+import socket
+testIP = "8.8.8.8"
+s = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+s.connect((testIP, 0))
+ipaddr = s.getsockname()[0]
+host = socket.gethostname()
+print ("IP:", ipaddr, " Host:", host)
+
+###### neopixels - just so we can shut it down if needed
+import board
+import neopixel
+
+#######################################
+############ CONFIGURATION ############
+#######################################
+
+# Webserver 
+SERVER_PORT = "8000"
+host_url = ipaddr + ':' + SERVER_PORT
+
+# Choose an open pin connected to the Data In of the NeoPixel strip, i.e. board.D18
+# NeoPixels must be connected to D10, D12, D18 or D21 to work.
+pixel_pin = board.D18
+
+# The order of the pixel colors - RGB or GRB. Some NeoPixels have red and green reversed!
+# For RGBW NeoPixels, simply change the ORDER to RGBW or GRBW.
+ORDER = neopixel.GRB
+
+#max brightness to limit power consumption and heat - match with twitch_onair_neopixel.py
+MAX_HARDWARE_BRIGHTNESS = 0.33
+
+###### Defaults
+user_login = "europayuu"
+client_id = "<CLIENT_ID>"
+client_secret = "<CLIENT_SECRET>"
+token_stale_age = "30"
+update_interval = "10"
+num_pixels = "4"
+live_color = "(255,0,0)"
+led_brightness = "0.3"
+placeholder_secret = "*****" #not stored
+num_rows = "3"
+num_columns = "8"
+
+# Debug Log. set to True if you want debug file output
+ENABLE_DEBUG_LOG = False
+DEBUG_LOG_FILENAME = 'logs/twitch_onair_webserver_log.txt'
+
+#######################################
+########## END CONFIGURATION ##########
+#######################################
+
+def setDefaults():
+    global user_login
+    global client_id
+    global client_secret
+    global token_stale_age
+    global update_interval
+    global num_pixels
+    global live_color
+    global led_brightness
+    global num_rows
+    global num_columns
+
+    user_login = "europayuu"
+    client_id = "<CLIENT_ID>"
+    client_secret = "<CLIENT_SECRET>"
+    token_stale_age = "30"
+    update_interval = "10"
+    num_pixels = "4"
+    live_color = "(255,0,0)"
+    led_brightness = "0.3"
+
+######## DEBUG LOG ########
+if ENABLE_DEBUG_LOG:
+    import logging
+    logging.basicConfig(filename=DEBUG_LOG_FILENAME, level=logging.DEBUG)
+
+def printLog(message='',alsoprint=True,level='debug'):
+    if ENABLE_DEBUG_LOG:
+        if level == 'debug':
+            logging.info(message)
+        elif level == 'info':
+            logging.info(message)
+        else:
+            logging.warning(message)
+    else:
+        pass
+    if alsoprint:
+        print(message)
+
+###### HEX <-> RGB conversions
+
+def hex_to_rgb(hex):
+  rgb = []
+  for i in (0, 2, 4):
+    decimal = int(hex[i:i+2], 16)
+    rgb.append(decimal)
+  
+  return tuple(rgb)
+
+def rgb_to_hex(r, g, b):
+  return '#%02x%02x%02x' % (r, g, b)
+
+###### check for config file
+def tryLoadConfig():
+    global user_login
+    global client_id
+    global client_secret
+    global token_stale_age
+    global update_interval
+    global num_pixels
+    global live_color
+    global led_brightness
+    global num_rows
+    global num_columns
+
+    json_read_error = 'Error reading key value. Default key value used for '
+
+    config_file_exists = os.path.isfile('config/twitch_onair_config.json')
+    if config_file_exists:
+        print ('Configuration file found. Loading config')
+        with open('config/twitch_onair_config.json') as json_config_file:
+            configData = json.load(json_config_file)
+            try:
+                user_login = configData['user']
+            except:
+                printLog(json_read_error + 'user')
+            
+            try:
+                client_id = configData['client_id']
+            except:
+                printLog(json_read_error + 'client_id')
+            
+            try:
+                client_secret = configData['client_secret']
+            except:
+                printLog(json_read_error + 'client_secret')
+            
+            try:
+                token_stale_age = int( configData['token_stale_age'] )
+            except:
+                printLog(json_read_error + 'token_stale_age')
+            
+            try: 
+                update_interval = int( configData['update_interval'] )
+            except:
+                printLog(json_read_error + 'update_interval')
+            
+            try:
+                num_pixels = int( configData['num_pixels'] )
+            except:
+                printLog(json_read_error + 'num_pixels')
+            
+            try:
+                live_color = eval( str(configData['live_color'] ) )
+            except:
+                printLog(json_read_error + 'live_color')
+
+            try:
+                led_brightness = eval( configData['led_brightness'] )
+            except:
+                printLog(json_read_error + 'led_brightness')
+            
+            try:
+                num_rows = int( configData['num_rows'] )
+            except:
+                printLog(json_read_error + 'num_rows')
+            
+            try:
+                num_columns = int( configData['num_columns'] )
+            except:
+                printLog(json_read_error + 'num_columns')
+
+    else: #create default config file
+        print('Configuration file doesn\'t exist. Creating...')
+        writeConfig()
+        print('Default Configuration File Created.')
+
+def writeChangeFile():
+    f = open("twitch_onair_config_updated.txt", "w")
+    f.write("temp")
+    f.close()
+
+def writeConfig():
+    data = {
+        'user': user_login,
+        'client_id': client_id,
+        'client_secret': client_secret,
+        'token_stale_age': token_stale_age,
+        'update_interval': update_interval,
+        'num_pixels': num_pixels,
+        'live_color': live_color,
+        'led_brightness': led_brightness,
+        'num_rows': num_rows,
+        'num_columns': num_columns
+    }
+    with open('config/twitch_onair_config.json', 'w') as outfile:
+        json.dump(data, outfile)
+    print( 'Config Written')
+    writeChangeFile()
+
+def deleteConfig():
+    try:
+        os.remove('config/twitch_onair_config.json')
+        print('Saved Config Deleted')
+    except:
+        print('Failed to delete Saved Config. Does it exist?')
+        pass
+    deleteToken()
+    writeChangeFile()
+
+def deleteToken():
+    try:
+        os.remove('config/twitch_appaccesstoken.json')
+        print('App Access Token Deleted')
+    except:
+        print('Unable to delete App Access Token. Does it exist?')
+        pass
+    #writeChangeFile()
+
+def pixelClear():
+    tryLoadConfig()
+    pixels = neopixel.NeoPixel(
+        pixel_pin, int(num_pixels), brightness=float(led_brightness), auto_write=False, pixel_order=ORDER
+        )
+    pixels.fill((0,0,0))
+    pixels.show()
+
+def pixelSequential(color=(255,98,0), length=2.0, fadeLength=4, reverse=False, clearPrevious=True, hold=False): #copied from twitch_onair_neopixel
+
+    tryLoadConfig()
+    pixels = neopixel.NeoPixel(
+        pixel_pin, int(num_pixels), brightness=float(led_brightness), auto_write=False, pixel_order=ORDER
+        )
+
+    padding = fadeLength * 2 #clamp(fadeLength, 2, (fadeLength+2))
+    start = 0 - padding
+    stop = num_pixels + padding
+    step = 1
+
+    #Loop
+    for x in range(start,stop,step):
+
+        if reverse:
+            x = ( num_pixels - x ) - 1
+        else:
+            pass
+
+        fadeLength = clamp(fadeLength, 1, fadeLength)
+
+        #Fade
+        if fadeLength > 1:
+            for y in range(fadeLength):
+                brightnessScalar =  1.0 - ( float(y) / float(fadeLength) ) ** 0.5
+                try:
+                    colorResult = [
+                        int( clamp( ( float( color[0] ) * brightnessScalar ), 0.0, 256.0 ) ),
+                        int( clamp( ( float( color[1] ) * brightnessScalar ), 0.0, 256.0 ) ),
+                        int( clamp( ( float( color[2] ) * brightnessScalar ), 0.0, 256.0 ) )
+                        ]
+                    if not reverse:
+                        if 0 <= ( x - y ) < num_pixels:
+                            pixels[ x - y ] = colorResult
+                    else:
+                        if 0 <= x <= num_pixels:
+                            pixels[ x + y ] = colorResult
+                except IndexError:
+                    pass
+        else:
+            pass
+
+        #Brightest Pixel
+        try:
+            if 0 <= x <= num_pixels:
+                pixels[x] = color
+            else:
+                pass
+        except IndexError:
+            pass
+
+        #Clear Previous
+        if clearPrevious:
+            try:
+                if not reverse:
+                    pixels[ x - fadeLength] = (0,0,0)
+                else:
+                    pixels[ x + fadeLength] = (0,0,0)
+            except IndexError:
+                pass
+        else:
+            pass
+
+        pixels.show()
+        time.sleep( ( 1 / num_pixels)  * length )
+    if not hold:
+        pixelClear()
+
+def tryKillNeopixelService():
+    print('twitch_onair_webserver: Killing Neopixel Service...')
+    pidResult = pid.tryReadPID('neopixel')
+    if pidResult >= 0:
+        os.system('sudo kill ' + str(pidResult))
+        pixelSequential(length=1.0, reverse=True)
+        pixelClear()
+        pid.delPID('neopixel')
+    else:
+        pass
+
+def startNeopixelService():
+    print('twitch_onair_webserver: Starting Neopixel Service...')
+    os.system('sudo python3 twitch_onair_neopixel.py &')
+
+def restartSystemLED():
+    tryKillNeopixelService()
+    startNeopixelService()
+
+###### Startup
+tryLoadConfig()
+
+###### Flask webapp
+app = Flask(__name__, static_url_path='',
+    static_folder='static')
+
+@app.route('/', methods=['GET', 'POST'])
+def index():
+    global user_login
+    global client_id
+    global client_secret
+    global token_stale_age
+    global update_interval
+    global num_pixels
+    global live_color
+    global led_brightness
+    global num_rows
+    global num_columns
+
+    if request.method == 'POST':
+        user_login = request.form['user_login'][:30]
+        client_id = request.form['client_id'][:60]
+        
+        # Only update client_secret if it's not the server-obfuscated value
+        POST_secret = request.form['client_secret'][:60]
+
+        if POST_secret != placeholder_secret:
+            print('POST_secret updated. Updating client_secret and invalidating token...')
+            client_secret = POST_secret
+            deleteToken()
+        else:
+            print('No change to POST_secret. client_secret not updated.')
+            pass
+        
+        token_stale_age = request.form['token_stale_age']
+        update_interval = request.form['update_interval']
+        num_pixels = request.form['num_pixels'][:9]
+        
+        # old logic for color
+        #live_color = (
+            #saturate( int(request.form['live_color_r'][:3]) ),
+            #saturate( int(request.form['live_color_g'][:3]) ),
+            #saturate( int(request.form['live_color_b'][:3]) ),
+            #)
+        
+        led_brightness = request.form['led_brightness']
+
+        # hex -> rgb
+        live_color_picker_hex = ( request.form['live_color_picker'] )[1:]
+        live_color = hex_to_rgb(live_color_picker_hex)
+        live_color = (
+            saturate( live_color[0] ),
+            saturate( live_color[1] ),
+            saturate( live_color[2] )
+            )
+
+        writeConfig()
+        tryLoadConfig()
+
+        live_color_hex = rgb_to_hex( (live_color[0]),(live_color[1]),(live_color[2]) )
+
+        return render_template('index.html',
+            user_login_value=user_login,
+            client_id_value=client_id,
+            client_secret_value=placeholder_secret,
+            token_stale_age_value=token_stale_age,
+            update_interval_value=update_interval,
+            num_pixels_value=num_pixels,
+            #live_color_r_value=live_color[0],
+            #live_color_g_value=live_color[1],
+            #live_color_b_value=live_color[2],
+            live_color_picker_value=live_color_hex,
+            neon_color=live_color_hex,
+            neon_color2=live_color_hex,
+            brightness_value=led_brightness,
+            num_rows_value=num_rows,
+            num_columns_value=num_columns
+            )
+
+    else:
+        tryLoadConfig()
+
+        live_color_hex = rgb_to_hex( (live_color[0]),(live_color[1]),(live_color[2]) )
+
+        return render_template('index.html',
+            user_login_value=user_login,
+            client_id_value=client_id,
+            client_secret_value=placeholder_secret,
+            token_stale_age_value=token_stale_age,
+            update_interval_value=update_interval,
+            num_pixels_value=num_pixels,
+            #live_color_r_value=live_color[0],
+            #live_color_g_value=live_color[1],
+            #live_color_b_value=live_color[2],
+            live_color_picker_value=live_color_hex,
+            neon_color=live_color_hex,
+            neon_color2=live_color_hex,
+            brightness_value=led_brightness,
+            num_rows_value=num_rows,
+            num_columns_value=num_columns
+            )
+
+@app.route('/reset', methods=['GET', 'POST'])
+def reset():
+
+    deleteConfig()
+    setDefaults()
+
+    return render_template('bye.html', message="Configuration Reset")
+
+@app.route('/restart', methods=['GET', 'POST'])
+def restart():
+
+    print('restart')
+    tryKillNeopixelService()
+    time.sleep(1.0)
+    pixelClear()
+    time.sleep(0.25)
+    os.system('sudo shutdown -r now')
+
+    return render_template('bye.html', message="Restarting...")
+
+@app.route('/restartled', methods=['GET', 'POST'])
+def restartLED():
+
+    print('restart LEDs')
+    restartSystemLED()
+
+    return render_template('bye.html', message="Restarting LEDs...")
+
+@app.route('/killled', methods=['GET', 'POST'])
+def killLED():
+
+    print('kill LEDs')
+    tryKillNeopixelService()
+
+    tryLoadConfig()
+
+    live_color_hex = rgb_to_hex( (live_color[0]),(live_color[1]),(live_color[2]) )
+
+    return render_template('index.html',
+        user_login_value=user_login,
+        client_id_value=client_id,
+        client_secret_value=placeholder_secret,
+        token_stale_age_value=token_stale_age,
+        update_interval_value=update_interval,
+        num_pixels_value=num_pixels,
+        #live_color_r_value=live_color[0],
+        #live_color_g_value=live_color[1],
+        #live_color_b_value=live_color[2],
+        live_color_picker_value=live_color_hex,
+        neon_color=live_color_hex,
+        neon_color2=live_color_hex,
+        brightness_value=led_brightness,
+        num_rows_value=num_rows,
+        num_columns_value=num_columns
+        )
+
+@app.route('/deltoken', methods=['GET', 'POST'])
+def deltoken():
+
+    deleteToken()
+
+    return render_template('bye.html', message="Refreshing Token...")
+
+if __name__ == '__main__':
+    app.run(host='0.0.0.0', port=SERVER_PORT)

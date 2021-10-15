@@ -1,0 +1,147 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+   <style>
+      .neon {
+         text-shadow: 0px 0px 6px {{neon_color}};
+         color: {{neon_color2}};
+      }
+   </style>
+
+   <title>ON-AIR Sign</title>
+   <link rel="stylesheet" href="css/styles.css">
+   <link rel="stylesheet" href="css/stars.css">
+  
+   <link rel="preconnect" href="https://fonts.googleapis.com">
+   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+   <link href="https://fonts.googleapis.com/css2?family=Comfortaa:wght@500&family=Quicksand&display=swap" rel="stylesheet">
+
+   <meta name="viewport" content="width=device-width, initial-scale=1.0">
+</head>
+
+<body>
+
+<div class="stars">
+<div class="twinkling">
+<div class="gradient">
+
+<div class="holder">
+<h1 class="mainheader">Twitch <span class="neon">ON-AIR</span> Sign</h1>
+<div class="subholder">
+
+<h2 class="subheader">Settings</h2>
+
+<!-- Form -->
+<div class="form">
+
+<form action="/" method="POST">
+
+<h4>Basic:</h4>
+
+<div class="fieldHolder">
+   <label for="user_login">Watch User:</label>
+   <span><input type="text" id="user_login" name="user_login" value ="{{user_login_value}}"></span>
+</div>
+<!--
+<div class="fieldHolder">
+   <label for="live_color_r">Live Color R</label>
+   <span><input type="number" id="live_color_r" name="live_color_r" value ="{{live_color_r_value}}"></span>
+</div>
+
+<div class="fieldHolder">
+   <label for="live_color_g">Live Color G</label>
+   <span><input type="number" id="live_color_g" name="live_color_g" value ="{{live_color_g_value}}"></span>
+</div>
+
+<div class="fieldHolder">
+   <label for="live_color_b">Live Color B</label>
+   <span><input type="number" id="live_color_b" name="live_color_b" value ="{{live_color_b_value}}"></span>
+</div>-->
+
+<div class="fieldHolder">
+   <label for="live_color_picker">Live Color</label>
+   <span><input type="color" id="live_color_picker" name="live_color_picker" value ="{{live_color_picker_value}}"></span>
+</div>
+
+<div class="fieldHolder">
+   <label for="led_brightness">Brightness</label>
+   <span><input type="range" min="0.025" max="1.0" step="0.025" id="led_brightness" name="led_brightness" value ="{{brightness_value}}"></span>
+</div>
+
+<h4>Advanced:</h4>
+
+<div class="fieldHolder">
+   <label for="client_id">Client ID:</label>
+   <span><input type="text" id="client_id" name="client_id" value ="{{client_id_value}}"></span>
+</div>
+
+<div class="fieldHolder">
+   <label for="client_secret">Client Secret:</label>
+   <span><input type="password" id="client_secret" name="client_secret" value ="{{client_secret_value}}"></span>
+</div>
+
+<div class="fieldHolder">
+   <label for="token_stale_age">Token Expiry Days:</label>
+   <span><input type="number" id="token_stale_age" name="token_stale_age" value ="{{token_stale_age_value}}"></span>
+</div>
+
+<div class="fieldHolder">
+   <label for="update_interval">Interval (Seconds):</label>
+   <span><input type="number" id="update_interval" name="update_interval" value ="{{update_interval_value}}"></span>
+</div>
+
+<div class="fieldHolder">
+   <label for="num_pixels">Number of Pixels</label>
+   <span><input type="number" id="num_pixels" name="num_pixels" value ="{{num_pixels_value}}"></span>
+</div>
+
+<div class="fieldHolder">
+   <label for="num_rows">Number of Rows</label>
+   <span><input type="number" id="num_rows" name="num-rows" value ="{{num_rows_value}}"></span>
+</div>
+
+<div class="fieldHolder">
+   <label for="num_columns">Number of Columns</label>
+   <span><input type="number" id="num_columns" name="nuM_columns" value ="{{num_columns_value}}"></span>
+</div>
+
+<div class="saveButtonHolder">
+   <input class="saveButton" type="submit" value="Save">
+</div>
+</form>
+
+</div> <!--form--><!-- "Turn it off and back on" Troubleshooting section -->
+
+<h2 class="subheader">Troubleshooting</h2>
+
+<div class="buttonsHolder">
+<form action="/restartled" method="POST">
+<input class="button" type="submit" id="restartled" name = "restartled" value="Restart LEDs">
+</form>
+
+<!--<form action="/killled" method="POST">
+<input type="submit" id="killled" name = "killled" value="Turn Off LEDs">
+</form>--> <!-- Probably not a good idea to let the user handle this one -->
+
+<form action="/restart" method="POST">
+<input class="button" type="submit" id="restart" name = "restart" value="Restart Device">
+</form>
+
+<form action="/reset" method="POST">
+<input class="button" type="submit" id="reset" name = "reset" value="Reset">
+</form>
+
+<form action="/deltoken" method="POST">
+<input class="button" type="submit" id="deltoken" name = "deltoken" value="Refresh Token">
+</form>
+</div><!--form-->
+
+   </div> <!--sub holder-->
+</div> <!--holder-->
+
+</div><!--gradient-->
+</div><!--twinkling-->
+</div><!--stars-->
+
+</body>
+</html>
