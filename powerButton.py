@@ -53,10 +53,10 @@ def tryLoadConfig():
     global num_pixels
     global led_brightness
 
-    config_file_exists = os.path.isfile('twitch_onair_config.json')
+    config_file_exists = os.path.isfile('config/twitch_onair_config.json')
     if config_file_exists:
         print ('Configuration file found. Loading config')
-        with open('twitch_onair_config.json') as json_config_file:
+        with open('config/twitch_onair_config.json') as json_config_file:
             configData = json.load(json_config_file)
             num_pixels = int( configData['num_pixels'] )
             led_brightness = configData['led_brightness']
