@@ -13,6 +13,7 @@ import pid #store PID in file so webserver can kill if needed
 pid.writePID('webserver') #filename is referenced by powerButton - make sure these are synchronized
 
 import os
+import datetime
 from flask import Flask, render_template, request, url_for, redirect, send_from_directory
 import json
 import time
@@ -75,6 +76,10 @@ DEBUG_LOG_FILENAME = 'logs/twitch_onair_webserver_log.txt'
 ########## END CONFIGURATION ##########
 #######################################
 
+# Initial state machine
+last_config_file_time = "-1"
+
+# Defaults
 def setDefaults():
     global user_login
     global client_id
@@ -140,67 +145,82 @@ def tryLoadConfig():
     global num_rows
     global num_columns
 
-    json_read_error = 'Error reading key value. Default key value used for '
+    json_read_error = 'Webserver: Error reading key value. Default key value used for '
 
     config_file_exists = os.path.isfile('config/twitch_onair_config.json')
     if config_file_exists:
-        print ('Configuration file found. Loading config')
-        with open('config/twitch_onair_config.json') as json_config_file:
-            configData = json.load(json_config_file)
-            try:
-                user_login = configData['user']
-            except:
-                printLog(json_read_error + 'user')
-            
-            try:
-                client_id = configData['client_id']
-            except:
-                printLog(json_read_error + 'client_id')
-            
-            try:
-                client_secret = configData['client_secret']
-            except:
-                printLog(json_read_error + 'client_secret')
-            
-            try:
-                token_stale_age = int( configData['token_stale_age'] )
-            except:
-                printLog(json_read_error + 'token_stale_age')
-            
-            try: 
-                update_interval = int( configData['update_interval'] )
-            except:
-                printLog(json_read_error + 'update_interval')
-            
-            try:
-                num_pixels = int( configData['num_pixels'] )
-            except:
-                printLog(json_read_error + 'num_pixels')
-            
-            try:
-                live_color = eval( str(configData['live_color'] ) )
-            except:
-                printLog(json_read_error + 'live_color')
 
-            try:
-                led_brightness = eval( configData['led_brightness'] )
-            except:
-                printLog(json_read_error + 'led_brightness')
-            
-            try:
-                num_rows = int( configData['num_rows'] )
-            except:
-                printLog(json_read_error + 'num_rows')
-            
-            try:
-                num_columns = int( configData['num_columns'] )
-            except:
-                printLog(json_read_error + 'num_columns')
+        ### Did the file change from last time?
+        global last_config_file_time
+        config_moddate = os.stat('config/twitch_onair_config.json') [8] # there are 10 attributes this call returns and you want the next to last
+        # format our timestamp
+        timestamp = datetime.datetime.fromtimestamp(config_moddate).strftime('%Y-%m-%dT%H:%M:%S')
+        # For debugging file modification detection
+        #print('******** config file modified date: ' + timestamp + " ********")
+
+        if timestamp != last_config_file_time:
+            printLog ('Webserver: Configuration file found. Loading Config. Modified: ' + timestamp.replace("T", " ") )
+            with open('config/twitch_onair_config.json') as json_config_file:
+                configData = json.load(json_config_file)
+                try:
+                    user_login = configData['user']
+                except:
+                    printLog(json_read_error + 'user')
+                
+                try:
+                    client_id = configData['client_id']
+                except:
+                    printLog(json_read_error + 'client_id')
+                
+                try:
+                    client_secret = configData['client_secret']
+                except:
+                    printLog(json_read_error + 'client_secret')
+                
+                try:
+                    token_stale_age = int( configData['token_stale_age'] )
+                except:
+                    printLog(json_read_error + 'token_stale_age')
+                
+                try: 
+                    update_interval = int( configData['update_interval'] )
+                except:
+                    printLog(json_read_error + 'update_interval')
+                
+                try:
+                    num_pixels = int( configData['num_pixels'] )
+                except:
+                    printLog(json_read_error + 'num_pixels')
+                
+                try:
+                    live_color = eval( str(configData['live_color'] ) )
+                except:
+                    printLog(json_read_error + 'live_color')
+
+                try:
+                    led_brightness = eval( configData['led_brightness'] )
+                except:
+                    printLog(json_read_error + 'led_brightness')
+                
+                try:
+                    num_rows = int( configData['num_rows'] )
+                except:
+                    printLog(json_read_error + 'num_rows')
+                
+                try:
+                    num_columns = int( configData['num_columns'] )
+                except:
+                    printLog(json_read_error + 'num_columns')
+
+                last_config_file_time = timestamp
+
+        else:
+            printLog('Webserver: No changes in configuration file. Config Load Skipped.')
 
     else: #create default config file
-        print('Configuration file doesn\'t exist. Creating...')
+        print('Webserver: Configuration file doesn\'t exist. Creating...')
         writeConfig()
-        print('Default Configuration File Created.')
+        print('Webserver: Default Configuration File Created.')
 
 def writeChangeFile():
     f = open("temp/twitch_onair_config_updated.txt", "w")
@@ -325,7 +345,7 @@ def tryKillNeopixelService():
     print('twitch_onair_webserver: Killing Neopixel Service...')
     pidResult = pid.tryReadPID('neopixel')
     if pidResult >= 0:
-        os.system('sudo kill ' + str(pidResult))
+        pid.killPIDWithScript(pidResult, script='twitch_onair_neopixel.py')
         pixelSequential(length=1.0, reverse=True)
         pixelClear()
         pid.delPID('neopixel')

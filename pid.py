@@ -1,4 +1,9 @@
 import os
+import subprocess
+
+def get_pname(id):
+    p = subprocess.Popen(["ps -o cmd= {}".format(id)], stdout=subprocess.PIPE, shell=True)
+    return str(p.communicate()[0])
 
 def tryReadPID(filename):
 	filename = ('temp/pid_' + filename + '.txt')
@@ -28,4 +33,31 @@ def delPID(filename):
 		print(filename_combined + ' deleted successfully')
 	except:
 		print(filename_combined + ' failed to delete. Does it exist?')
-		pass
+
+def getProcessByPID(pid="0"):
+	name = get_pname( pid )
+	if len(name) > 3: #process found
+		return name
+	else: #process not found
+		return -1
+
+def killPIDWithScript(pid=0, name="python3", script="test.py"):
+	separator = '\n******\n'
+	processInfo = getProcessByPID(pid)
+	if processInfo != -1:
+		#format the result
+		processInfo = processInfo[2:]
+		processInfo = processInfo[:-3]
+		processInfo = processInfo.split(" ", 1)
+
+		if processInfo[0] == name and processInfo[1] == script:
+			print(separator + 'killPIDWithScript() MATCHED name: ' + name + ", script: " + script + " and PID: " + str(pid) + ". Killing with os.kill()...n" + separator)
+			# os.kill(pid, 0) #not sure why this doesnt work
+			os.system('sudo kill ' + str(pid))
+
+		else:
+			print(separator + 'killPIDWithScript() UNMATCHED for name: ' + name + ", script: " + script + " and PID: " + str(pid) + ". Skipping kill..." + separator)
+
+	elif -1:
+		print(separator + 'WARNING: killPIDWithScript() Failed. Process not found' + separator)
+	else: print(separator + 'WARNING: killPIDWithScript() Failed. Unknown Error.' + separator)

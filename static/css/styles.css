@@ -82,6 +82,11 @@ h4 {
 	font-size:  14pt;
 	color: darkslateblue;
 }
+
+.subheader {
+	margin-bottom: 12px;
+}
+
 .fieldHolder {
 	overflow: hidden;
 	padding-top: 4px;
@@ -176,7 +181,7 @@ input[type=color] {
 	width: 100%;
 	margin: auto;
 	text-align: center;
-	margin-top: 12px;
+	margin-top: 24px;
 	margin-bottom: 12px;
 }
 
@@ -199,6 +204,10 @@ input[type=color] {
 .button-dark {
 	background-color: darkslateblue;
 	color: white;
+}
+
+.extramargin {
+	margin-bottom: 24px;
 }
 
 .button:hover {

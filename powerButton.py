@@ -4,8 +4,6 @@ import os, sys, time
 import RPi.GPIO as GPIO
 import pid #Used to killing webserver / neopixel service
 
-print('powerButton script Running')
-
 print('\n////////////////////////////////')
 print('Starting Power Button Service...')
 print('////////////////////////////////')

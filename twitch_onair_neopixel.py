@@ -99,6 +99,7 @@ DEBUG_LOG_FILENAME = 'logs/twitch_onair_neopixel_log.txt'
 
 # Initial State machine
 first_loop = True
+last_config_file_time = "-1"
 
 ######## DEBUG LOG ########
 if ENABLE_DEBUG_LOG:
@@ -108,8 +109,6 @@ if ENABLE_DEBUG_LOG:
 def timesStamp():
 	current_time = datetime.datetime.now()
 	return ( "[" + str( current_time ) + "] ")
-	#formatted_datetime = a_datetime.isoformat()
-	#json_datetime = json.dumps(formatted_datetime)
 
 def printLog(message='',alsoprint=True,level='debug',include_timestamp=True):
 	if include_timestamp:
@@ -133,6 +132,17 @@ if ENABLE_DEBUG_LOG:
 def clamp(n, smallest, largest): return max(smallest, min(n, largest))
 def saturate(n): return clamp(n, 0,255) # I miss HLSL
 
+# update datetime
+def updateTime():
+	# get the current datetime time and format it - we want to update our global variables for current time
+	global a_datetime
+	global formatted_datetime
+	global json_datetime
+
+	a_datetime = datetime.datetime.now()
+	formatted_datetime = a_datetime.isoformat()
+	json_datetime = json.dumps(formatted_datetime)
+
 ###### Load configuration File ######
 
 def tryLoadConfig():
@@ -151,65 +161,80 @@ def tryLoadConfig():
 
 	config_file_exists = os.path.isfile('config/twitch_onair_config.json')
 	if config_file_exists:
-		printLog ('Configuration file found. Loading config')
-		with open('config/twitch_onair_config.json') as json_config_file:
-			configData = json.load(json_config_file)
-			try:
-				user_login = configData['user']
-			except:
-				printLog(json_read_error + 'user')
-			
-			try:
-				client_id = configData['client_id']
-			except:
-				printLog(json_read_error + 'client_id')
-			
-			try:
-				client_secret = configData['client_secret']
-			except:
-				printLog(json_read_error + 'client_secret')
-			
-			try:
-				token_stale_age = int( configData['token_stale_age'] )
-			except:
-				printLog(json_read_error + 'token_stale_age')
-			
-			try: 
-				update_interval = int( configData['update_interval'] )
-			except:
-				printLog(json_read_error + 'update_interval')
-			
-			try:
-				num_pixels = int( configData['num_pixels'] )
-			except:
-				printLog(json_read_error + 'num_pixels')
-			
-			try:
-				live_color = eval( str(configData['live_color'] ) )
-			except:
-				printLog(json_read_error + 'live_color')
 
-			try:
-				led_brightness = eval( configData['led_brightness'] )
-			except:
-				printLog(json_read_error + 'led_brightness')
-			
-			try:
-				num_rows = int( configData['num_rows'] )
-			except:
-				printLog(json_read_error + 'num_rows')
-			
-			try:
-				num_columns = int( configData['num_columns'] )
-			except:
-				printLog(json_read_error + 'num_columns')
+		### Did the file change from last time?
+		global last_config_file_time
+		config_moddate = os.stat('config/twitch_onair_config.json') [8] # there are 10 attributes this call returns and you want the next to last
+		# format our timestamp
+		timestamp = datetime.datetime.fromtimestamp(config_moddate).strftime('%Y-%m-%dT%H:%M:%S')
+		# For debugging file modification detection
+		#print('******** config file modified date: ' + timestamp + " ********")
 
-		led_brightness= clamp( (led_brightness * MAX_HARDWARE_BRIGHTNESS), 0, MAX_HARDWARE_BRIGHTNESS )
-		#printLog( 'Brightness set to ' + str(led_brightness) )
+		if timestamp != last_config_file_time:
+			printLog ('Configuration file found. Loading Config. Modified: ' + timestamp.replace("T", " ") )
+			with open('config/twitch_onair_config.json') as json_config_file:
+				configData = json.load(json_config_file)
+				try:
+					user_login = configData['user']
+				except:
+					printLog(json_read_error + 'user')
+				
+				try:
+					client_id = configData['client_id']
+				except:
+					printLog(json_read_error + 'client_id')
+				
+				try:
+					client_secret = configData['client_secret']
+				except:
+					printLog(json_read_error + 'client_secret')
+				
+				try:
+					token_stale_age = int( configData['token_stale_age'] )
+				except:
+					printLog(json_read_error + 'token_stale_age')
+				
+				try: 
+					update_interval = int( configData['update_interval'] )
+				except:
+					printLog(json_read_error + 'update_interval')
+				
+				try:
+					num_pixels = int( configData['num_pixels'] )
+				except:
+					printLog(json_read_error + 'num_pixels')
+				
+				try:
+					live_color = eval( str(configData['live_color'] ) )
+				except:
+					printLog(json_read_error + 'live_color')
 
-		pixels = neopixel.NeoPixel(
-		    pixel_pin, num_pixels, brightness=led_brightness, auto_write=False, pixel_order=ORDER
-			)
+				try:
+					led_brightness = eval( configData['led_brightness'] )
+				except:
+					printLog(json_read_error + 'led_brightness')
+				
+				try:
+					num_rows = int( configData['num_rows'] )
+				except:
+					printLog(json_read_error + 'num_rows')
+				
+				try:
+					num_columns = int( configData['num_columns'] )
+				except:
+					printLog(json_read_error + 'num_columns')
+
+			led_brightness= clamp( (led_brightness * MAX_HARDWARE_BRIGHTNESS), 0, MAX_HARDWARE_BRIGHTNESS )
+			#printLog( 'Brightness set to ' + str(led_brightness) )
+
+			pixels = neopixel.NeoPixel(
+			    pixel_pin, num_pixels, brightness=led_brightness, auto_write=False, pixel_order=ORDER
+				)
+
+			last_config_file_time = timestamp
+
+		else:
+			printLog('No changes in configuration file. Config Load Skipped.')
 
 	else:
 		printLog('ERROR: Configuration file not found, using default parameters. Will most likely break')
@@ -493,18 +518,7 @@ def pixelStart():
 	pixelFadeIn( (255,255,255),1.0 )
 	pixelFadeOut( (255,255,255),1.0 )
 
-###### Function Definitions ######
-
-#update datetime
-def updateTime():
-	# get the current datetime time and format it - we want to update our global variables for current time
-	global a_datetime
-	global formatted_datetime
-	global json_datetime
-
-	a_datetime = datetime.datetime.now()
-	formatted_datetime = a_datetime.isoformat()
-	json_datetime = json.dumps(formatted_datetime)
+######## Other Functions
 
 # does token exist?
 def tokenFileExist():
@@ -532,7 +546,8 @@ def openTokenFile(return_token):
 			if return_token:
 				return p['token']
 			else:
-				return int(difference.days)
+				#return int(difference.days)
+				return difference
 
 
 
@@ -588,17 +603,18 @@ def isLive(user_login):
 	token_file_exists = tokenFileExist()
 	if token_file_exists:
 
-		token_age = openTokenFile(0)
+		token_age_verbose = openTokenFile(0)
+		token_age = int (token_age_verbose.days)
 
 		if token_age <= token_stale_age:
-			printLog('Access token is valid. Age: ' + str(token_age) + ' days')
+			printLog('Access token is valid. Age: ' + str(token_age) + ' days. Verbose token age: [' + str(token_age_verbose) +']' )
 			app_access_token = openTokenFile(1)
 			if first_loop:
 				pixelAuthSuccess()
 				first_loop = False
 
 		else:
-			printLog('Token is stale, fetching new access token. age: ' + str(token_age) + ' days')
+			printLog('Token is stale, fetching new access token. age: ' + str(token_age) + ' days. Verbose token age: [' + str(token_age_verbose) +']' )
 			createTokenFile()
 			if tokenFileExist():
 				app_access_token = openTokenFile(1)
@@ -678,7 +694,7 @@ def tryKillNeopixelService():
     print('twitch_onair_neopixel: Killing Neopixel Service...')
     pidResult = pid.tryReadPID('neopixel')
     if pidResult >= 0:
-        os.system('sudo kill ' + str(pidResult))
+        pid.killPIDWithScript( ( pid.tryReadPID('neopixel') ), script='twitch_onair_neopixel.py')
         pixelClear()
         pid.delPID('neopixel')
     else:
