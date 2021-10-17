@@ -51,7 +51,7 @@ def killPIDWithScript(pid=0, name="python3", script="test.py"):
 		processInfo = processInfo.split(" ", 1)
 
 		if processInfo[0] == name and processInfo[1] == script:
-			print(separator + 'killPIDWithScript() MATCHED name: ' + name + ", script: " + script + " and PID: " + str(pid) + ". Killing with os.kill()...n" + separator)
+			print(separator + 'killPIDWithScript() MATCHED name: ' + name + ", script: " + script + " and PID: " + str(pid) + ". Killing..." + separator)
 			# os.kill(pid, 0) #not sure why this doesnt work
 			os.system('sudo kill ' + str(pid))
 

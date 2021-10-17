@@ -19,8 +19,14 @@ import datetime
 import pandas as pd #Simple datetime formatting for checking if tokens are stale
 import json
 import time
+
+# graphics
 import random
-import traceback
+import math
+import colorsys
+
+import threading
+from threading import Thread
 
 ###### store PID so it can be killed easily by the webserver
 import pid #store PID in file so webserver can kill if needed
@@ -97,9 +103,10 @@ DEBUG_LOG_FILENAME = 'logs/twitch_onair_neopixel_log.txt'
 ########## END CONFIGURATION ##########
 #######################################
 
-# Initial State machine
+# State Machine
 first_loop = True
 last_config_file_time = "-1"
+ASYNC_LED_STATE = 'IDLE'
 
 ######## DEBUG LOG ########
 if ENABLE_DEBUG_LOG:
@@ -129,8 +136,44 @@ if ENABLE_DEBUG_LOG:
 	separator = "********" + "\n" 
 	printLog("\n" + separator + 'twitch_onair_neopixel.py debug Log enabled, writing to file ' + DEBUG_LOG_FILENAME + "\n" + separator )
 
+########
+######## Math
+########
+
 def clamp(n, smallest, largest): return max(smallest, min(n, largest))
 def saturate(n): return clamp(n, 0,255) # I miss HLSL
+def lerp(a=1.0, b=1.0, f=0.5): return (a * (1.0 - f)) + (b * f);
+
+### 2D Vector Distance
+def distance2D(vec1=(0.0,0.0),vec2=(0.0,0.0)):
+	vec1x = vec1[0]
+	vec1y = vec1[1]
+	vec2x = vec2[0]
+	vec2y = vec2[1]
+
+	a = (vec2x-vec1x) ** 2.0
+	b = (vec2y-vec1y) ** 2.0
+	ab = a + b
+	abClamp = clamp(ab, 0.0001, ab)
+
+	return math.sqrt(abClamp)
+
+def hsv2rgb(h,s,v):
+	return tuple(round(i * 255) for i in colorsys.hsv_to_rgb(h,s,v))
+
+def rgb2hsv(r,g,b):
+	rf = float(r)
+	gf = float(g)
+	bf = float(b)
+	rgb = ( (rf / 255.0), (gf / 255.0), (bf / 255.0) )
+	return colorsys.rgb_to_hsv( rgb[0], rgb[1], rgb[2] )
+
+# Used to check even / odd rows of pixels since the wiring makes the X-direction alternate
+def isEven(num): return ( (num % 2) == 0 )
+
+def getTickLength(framerateDivider=1.0):
+	global TARGET_FRAMERATE
+	return 1.0 / ( float(TARGET_FRAMERATE) / framerateDivider )
 
 # update datetime
 def updateTime():
@@ -144,7 +187,6 @@ def updateTime():
 	json_datetime = json.dumps(formatted_datetime)
 
 ###### Load configuration File ######
-
 def tryLoadConfig():
 	global user_login
 	global client_id
@@ -228,7 +270,7 @@ def tryLoadConfig():
 			#printLog( 'Brightness set to ' + str(led_brightness) )
 
 			pixels = neopixel.NeoPixel(
-			    pixel_pin, num_pixels, brightness=led_brightness, auto_write=False, pixel_order=ORDER
+				pixel_pin, num_pixels, brightness=led_brightness, auto_write=False, pixel_order=ORDER
 				)
 
 			last_config_file_time = timestamp
@@ -241,7 +283,9 @@ def tryLoadConfig():
 
 tryLoadConfig()
 
-###### Instantiate Neopixels & Graphics
+########
+######## LED Graphics
+########
 
 def pixelFlood(color):
 	pixels.fill(color)
@@ -251,11 +295,7 @@ def pixelClear():
 	pixels.fill((0,0,0))
 	pixels.show()
 
-
 ### Convert screenspace to strip number ###
-def isEven(num):
-	return ( (num % 2) == 0 )
-
 def screenPixelInRange( pos=(0.0,0.0) ):
 	resultx = pos[0] >= 0.0 and pos[0] <= 1.0
 	resulty = pos[1] >= 0.0 and pos[1] <= 1.0
@@ -309,7 +349,126 @@ def drawToScreen( color=(255,255,255), pos=(0.0,0.0) ): #Draws a color to the ne
 			pixels.show()
 		except IndexError:
 			pass
-### End Convert screenspace to strip number ###
+
+### Pixel Index to Screen UV
+# Returns normalized screen space coordinates from a pixel strip ID input
+def stripToUV(pixel=0):
+	global num_pixels
+	global num_rows
+	global num_columns
+
+	fpixel = float(pixel)
+	fnum_rows = float(num_rows)
+	fnum_columns = float(num_columns)
+
+	posy = ( fnum_rows / (fnum_rows - 1.0) ) * ( float( int(fpixel / num_columns) ) / fnum_rows )
+	posx = ( ( fnum_columns / (fnum_columns - 1.0) ) * ( fpixel % fnum_columns ) ) / fnum_columns 
+	
+	row = int( int(posy * fnum_rows) )
+	if row != num_rows:
+		row += 1
+
+	if isEven( row ):
+		posx = 1.0 - posx
+
+	return (posx,posy)
+
+def drawScreenUVs():
+	global num_pixels
+	for x in range(num_pixels):
+		uv = stripToUV(pixel=x)
+		color = [
+		saturate( (int( uv[0] * float(255)) ) ),
+		clamp((int( uv[1] * float(255) )),0,255),
+		0
+		]
+		pixels[x] = color
+	pixels.show()
+
+### Draw rainbow
+# 0 = horizontal, 1 = vertical
+def drawRainbow(offset=0.0,scale=1.0, direction=0):
+	global num_pixels
+	global num_rows
+	direction = clamp(direction, 0, 1) #never trust the users, they are evil
+	for x in range(num_pixels):
+		u = ( stripToUV(x) )[direction]
+		u = u / ( 1 + (1 / num_rows) )
+		u = u * scale
+		u = u + offset
+		colorResult = hsv2rgb(u,1.0,1.0)
+		pixels[x] = colorResult
+	pixels.show()
+
+### Scrolling Rainbow
+def drawAnimateRainbow(length=1.0, framerateDivider=1.0, scale=1.0, reverse=False, direction=0):
+	tick = getTickLength(framerateDivider=framerateDivider)
+	loops = int( length / tick)
+	for i in range(loops):
+		a = float(i) / float(loops)
+		if reverse:
+			a = 1 - a
+		drawRainbow(offset=a, scale=scale, direction=direction)
+		time.sleep(tick)
+
+### color cycle
+def drawColorCycle(length=8.0, framerateDivider=1.0, reverse=False, offset=0.0):
+	tick = getTickLength(framerateDivider=framerateDivider)
+	loops = int( length / tick )
+	for i in range(loops):
+		a = float(i) / float(loops)
+		a = a + offset
+		if reverse: 
+			a = 1 - a
+		colorResult = hsv2rgb(a,1.0,1.0)
+		pixelFlood(colorResult)
+		time.sleep(tick)
+
+### Draw Circle
+### Todo: add / subtract / multiply blend modes
+### Todo: allow aspect ratio adjustment
+def drawCircle(color=(255,255,255), radius=0.2, origin=(0.5,0.5), invert=False, power=6.0):
+	global num_pixels
+	fadeRadius = 0.5
+
+	if radius <= fadeRadius:
+		fade = radius * 1/fadeRadius
+	else:
+		fade = 1.0
+
+	radius = clamp(radius, 0.0001, (radius * 2) )
+
+	for x in range(num_pixels):
+		uv = stripToUV(x)
+		sdf = distance2D( vec1=origin, vec2=(uv[0],uv[1]) )
+		sdfClampBiasScale = clamp( (sdf * radius), 0, 1.0) * ( 1 / clamp(radius, 0.0001, radius))
+
+		if not invert:
+			sdfClampBiasScale = 1.0 - sdfClampBiasScale
+
+		sdfClampBiasScale = clamp( ( (sdfClampBiasScale ** power) * power ) , 0, 1)
+
+		sdfClampBiasScale = sdfClampBiasScale * fade
+
+		colorResult = (
+			saturate( int( sdfClampBiasScale * float(color[0]) ) ),
+			saturate( int( sdfClampBiasScale * float(color[1]) ) ),
+			saturate( int( sdfClampBiasScale * float(color[2]) ) )
+			)
+		pixels[x] = colorResult
+	pixels.show()
+
+### Animates circle growing bigger in size
+def drawRipple(color=(255,255,255), startRadius=0.0, endRadius=4.0, length=1.0, framerateDivider=1.0, reverse=False):
+	tick = getTickLength(framerateDivider=framerateDivider)
+	loops = int( length / tick )
+	for i in range(loops):
+		a = float(i) / float(loops)
+		if reverse:
+			a = 1 - a
+		radius = lerp(a=startRadius,b=endRadius,f=a)
+		drawCircle(color=color, radius=radius)
+		time.sleep(tick)
 
 # Smooth fades
 def pixelFadeIn(color,length):
@@ -367,7 +526,7 @@ def pixelRandom( color=(255,255,255 ), numIterations=8, flashDots= 3, onTime=0.0
 		pixelClear()
 		time.sleep(offTime)
 
-#sequential with a soft fade tail
+#sequential with a soft tail
 def pixelSequential(color=(255,98,0), length=2.0, fadeLength=4, reverse=False, clearPrevious=True, hold=False):
 
 	padding = fadeLength * 2
@@ -432,6 +591,7 @@ def pixelSequential(color=(255,98,0), length=2.0, fadeLength=4, reverse=False, c
 	if not hold:
 		pixelClear()
 
+# Draw a single column
 def pixelDrawColumn(color=(255,255,255), posX=0.0 ):
 	for y in range(num_rows):
 			drawToScreen(color=color, pos=(posX, ( float(y) / float(num_rows-1) ) ))
@@ -491,25 +651,36 @@ def pixelHorizontalWipe(color=(255,98,0), length=1.0, fadeLength=0.0, reverse=Fa
 		pixelClear()
 
 def pixelError():
+	global ASYNC_LED_STATE
+	ASYNC_LED_STATE = 'IDLE'
+	time.sleep(1.5)
 	pixelFlash((255,0,0),6,0.25,0.1)
 
 # Attempt to authenticate using Client ID and secret to obtain a token
 def pixelAuth():
-	pixelFlash((148,0,255),3,0.2,0.2)
+	global ASYNC_LED_STATE
+	ASYNC_LED_STATE = 'AUTH'
+	#pixelFlash((148,0,255),3,0.2,0.2) #Old
 
-def pixelAuthSuccess():
+def pixelAuthSuccess(wait=0.0):
+	global ASYNC_LED_STATE
+	time.sleep(wait)
+	ASYNC_LED_STATE = 'IDLE'
+	time.sleep(0.5)
 	pixelFlash((0,255,0),4,0.1,0.1)
 
 # Stream went ONLINE but previously was offline
 def pixelLiveChanged():
-	pixelRandom( live_color, 8, 5, 0.05, 0.05 )
+	pixelRandom( live_color, 8, 5, 0.025, 0.025 )
 	time.sleep(0.5)
 	pixelFadeIn( live_color, 1.0)
 
 # Stream went OFFLINE but previously was online
 def pixelOffChanged():
-	pixelFlash(live_color, 1, 0.05, 0.5)
-	pixelFadeOut( live_color, 1.0)
+	#pixelFlash(live_color, 1, 0.05, 0.5) #Old
+	#pixelFadeOut( live_color, 1.0) #Old
+	drawRipple(color=live_color, startRadius=0.0, endRadius=4.0, length=1.0, framerateDivider=1.0, reverse=True)
+	pixelClear()
 
 # Start sequence = the Fadein/Out acts as a full array self-test
 def pixelStart():
@@ -518,7 +689,9 @@ def pixelStart():
 	pixelFadeIn( (255,255,255),1.0 )
 	pixelFadeOut( (255,255,255),1.0 )
 
-######## Other Functions
+########
+######## Twitch API
+######## The meat of the API calls / response parsing happens here
 
 # does token exist?
 def tokenFileExist():
@@ -549,15 +722,14 @@ def openTokenFile(return_token):
 				#return int(difference.days)
 				return difference
 
-
-
+# request a new token from Twitch API using client_id and client_secret, then store the token in config/twitch_appaccesstoken.json
 def createTokenFile():
 	pixelAuth()
 	updateTime()
 	data = {
-	    'client_id': client_id,
-	    'client_secret': client_secret,
-	    'grant_type': 'client_credentials',
+		'client_id': client_id,
+		'client_secret': client_secret,
+		'grant_type': 'client_credentials',
 	}
 
 	response = requests.post('https://id.twitch.tv/oauth2/token', data=data)
@@ -569,7 +741,6 @@ def createTokenFile():
 		ResponseTokenObfuscated = ResponseToken.replace( ( str(ResponseToken) )[0:26], 'xxxxxxxxxxxxxxxxxxxxxxxxxx' )
 
 		printLog('Token fetched: ' + ResponseTokenObfuscated)
-		pixelAuthSuccess()
 
 		#store the current token and date into file
 
@@ -577,19 +748,21 @@ def createTokenFile():
 		data = {}
 		data['tokens'] = []
 		data['tokens'].append({
-		    'token': ResponseToken,
-		    'time': json_datetime.strip('\"'),
+			'token': ResponseToken,
+			'time': json_datetime.strip('\"'),
 		})
 
 		with open('config/twitch_appaccesstoken.json', 'w') as outfile:
-		    json.dump(data, outfile)
+			json.dump(data, outfile)
+
+		pixelAuthSuccess(wait=2.5)
 
 	else:
 		printLog(str(ResponseJson))
 		printLog('createTokenFile(): Error Creating Token')
 		#pixelError() main loop already calls this
 
-	time.sleep(1.0) #delay this so the user can tell what's happening; no longer needed once we play a proper animation later
+	time.sleep(0.5) #Just in case, probably not necessary
 
 def checkConfigUpdate():
 	changed = os.path.isfile('temp/twitch_onair_config_updated.txt')
@@ -597,6 +770,9 @@ def checkConfigUpdate():
 		os.remove('temp/twitch_onair_config_updated.txt')
 	return changed	
 
+# Checks if user_login is live using Get Streams example on twitch API docs
+# More info: https://dev.twitch.tv/docs/api/reference#get-streams 
+# Returns 1 if user_login is online, 0 if user_login is offline, and -1 if there was an authentication error
 def isLive(user_login):
 	global first_loop
 	updateTime()
@@ -629,8 +805,8 @@ def isLive(user_login):
 
 	if tokenFileExist():
 		headers = {
-		    'Authorization': 'Bearer ' + app_access_token,
-		    'Client-Id': client_id,
+			'Authorization': 'Bearer ' + app_access_token,
+			'Client-Id': client_id,
 		}
 
 		url = 'https://api.twitch.tv/helix/streams?user_login=' + user_login
@@ -660,12 +836,16 @@ def isLive(user_login):
 	else:
 		return (-2)
 
-###### State machine
+########
+######## State Machine
+########
 
 live = 0
 previous_live = 0
 
-###### Debug Functions
+########
+######## Debug Functions
+########
 
 def debugLive(user_login):
 	global live
@@ -687,18 +867,20 @@ def stopLive():
 # Uncomment below if you just want to print to terminal
 #debugLive(twitch_user_login)
 
-##### Startup
+########
+######## Startup
+########
 
 # Only allow a single instance of this
 def tryKillNeopixelService():
-    print('twitch_onair_neopixel: Killing Neopixel Service...')
-    pidResult = pid.tryReadPID('neopixel')
-    if pidResult >= 0:
-        pid.killPIDWithScript( ( pid.tryReadPID('neopixel') ), script='twitch_onair_neopixel.py')
-        pixelClear()
-        pid.delPID('neopixel')
-    else:
-        pass
+	print('twitch_onair_neopixel: Killing Neopixel Service...')
+	pidResult = pid.tryReadPID('neopixel')
+	if pidResult >= 0:
+		pid.killPIDWithScript( ( pid.tryReadPID('neopixel') ), script='twitch_onair_neopixel.py')
+		pixelClear()
+		pid.delPID('neopixel')
+	else:
+		pass
 
 tryKillNeopixelService()
 
@@ -706,57 +888,92 @@ pid.writePID('neopixel') #filename is referenced by twitch_onair_webserver - mak
 
 pixelStart()
 
-###### Main Loop
-# Set below to false if you want to disable the main loop... for whatever reason (debug only?)
-enable_main = True
+########
+######## Main Loop
+########
 
-if enable_main:
-	try:
-	    while True:
-	        live = isLive(user_login)
+class Main(Thread):
+	def __init__(self):
+		Thread.__init__(self)
+		self.daemon = True
+		self.start()
+	def run(self):
+		global previous_live
+		global live
+		global user_login
+		global update_interval
+		global ASYNC_LED_STATE
 
-	        if checkConfigUpdate():
-	        	pixelClear()
-	        	pixelHorizontalWipe(color=live_color,length=0.25)
-	        	time.sleep(0.2)
-	        	pixelFadeOut(color=live_color,length=0.25)
-	        	time.sleep(0.5)
+		while True:
+			try:
+				live = isLive(user_login)
 
-	        if live >= 1:
-	        	printLog(user_login + ' is live')
-	        	if previous_live != live: #Did our live status change from the last check?
-	        		printLog('Live status has changed, calling pixelLiveChanged()')
-	        		pixelLiveChanged()
-	        	else:
-	        		pixelFlood(live_color)
-	        elif live == 0:
-	        	printLog(user_login + ' is offline')
-	        	if previous_live != live: #Did our live status change from the last check?
-	        		printLog('Live Status changed, calling PixelOffChanged()')
-	        		pixelOffChanged()
-	        	else:
-	        		pixelClear()
-	        else:
-	        	printLog('main(): Authentication Error')
-	        	pixelError()
+				if checkConfigUpdate():
+					pixelClear()
 
-	        previous_live = live
-	        update_interval = clamp(update_interval, 0.5, update_interval+0.5 ) # Clamp minimum to not kill CPu
-	        
-	        time.sleep(update_interval) # Delay in the loop to not kill CPU
-	        
-	        #printLog('Update Interval: ' + str(update_interval) + ' seconds')
+					pixelHorizontalWipe(color=live_color,length=0.25)
+					time.sleep(0.2)
+					pixelFadeOut(color=live_color,length=0.25)
+					time.sleep(0.5)
 
-	        tryLoadConfig();
-	        print('Heartbeat, PID: ' + str(os.getpid())) # Debugging
+				if live >= 1:
+					printLog(user_login + ' is live')
+					if previous_live != live: #Did our live status change from the last check?
+						printLog('Live status has changed, calling pixelLiveChanged()')
+						pixelLiveChanged()
+					else:
+						pixelFlood(live_color)
+				elif live == 0:
+					printLog(user_login + ' is offline')
+					if previous_live != live: #Did our live status change from the last check?
+						printLog('Live Status changed, calling PixelOffChanged()')
+						pixelOffChanged()
+					else:
+						pixelClear()
+				else:
+					printLog('main(): Authentication Error')
+					pixelError()
 
-	except KeyboardInterrupt:
-		stopLive()
-		pixelSequential(color=(255,98,0),reverse=True)
-		printLog('Keyboard Interrupt')
+				previous_live = live
+				update_interval = clamp(update_interval, 0.5, update_interval+0.5 ) # Clamp minimum to not kill CPu
+			except:
+				printLog('Exception Occurred in Main(). Will try again next update')
+				
+			time.sleep(update_interval) # Delay in the loop to not kill CPU			
+			#printLog('Update Interval: ' + str(update_interval) + ' seconds')
 
-	except Exception:
-		print("Exception in twitch_onair_neopixel.py")
-		print("-"*60)
-		traceback.print_exc(file=sys.stdout)
-		print("-"*60)
+			tryLoadConfig();
+			print('Heartbeat, PID: ' + str(os.getpid())) # Debugging
+
+########
+######## Async LED Thread
+########
+
+class AsyncLED(Thread):
+	def __init__(self):
+		Thread.__init__(self)
+		self.daemon = True
+		self.start()
+	def run(self):
+		global ASYNC_LED_STATE
+		while True:
+			try:
+				# Authenticating
+				if ASYNC_LED_STATE == 'AUTH':
+					drawRipple(color=(148,0,255), startRadius=0.0, endRadius=4.0, length=0.2, framerateDivider=1.0, reverse=False)
+					if ASYNC_LED_STATE == 'AUTH': time.sleep(0.1)
+					else: pass
+					if ASYNC_LED_STATE == 'AUTH': drawRipple(color=(148,0,255), startRadius=0.0, endRadius=4.0, length=0.2, framerateDivider=1.0, reverse=True)
+					else: pass
+					pixelClear()
+					time.sleep(0.1)
+				else:
+					time.sleep(0.2)
+			except:
+				printLog('Exception occured in AsyncLED(). Will try again next tick')
+				time.sleep(0.5)
+
+Main()
+AsyncLED()
+while True:
+	pass
