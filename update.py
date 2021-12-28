@@ -29,7 +29,7 @@ def CheckUpdateNeeded():
 	try:
 		os.system('wget https://raw.githubusercontent.com/europaYuu/RaspiTwitchONAIR/main/VERSION -P /home/pi/temp/')
 		version_local = getVersion('VERSION')
-		version_remote = getVersion('~/temp/VERSION')
+		version_remote = getVersion('temp/VERSION')
 
 		if version_local != version_remote:
 			print('New Version Available: ' + version_remote)
