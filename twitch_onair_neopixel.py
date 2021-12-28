@@ -921,11 +921,14 @@ def tryKillNeopixelService():
     #    pid.delPID('neopixel')
     #else:
     #    pass
-    os.system('sudo systemctl stop twitch_onair_neopixel_service.service')
-    pixelSequential(length=1.0, reverse=True)
-    pixelClear()
+    try:
+    	os.system('sudo systemctl stop twitch_onair_neopixel_service.service')
+    	pixelSequential(length=1.0, reverse=True)
+    	pixelClear()
+    except:
+    	pass
 
-tryKillNeopixelService()
+#tryKillNeopixelService()
 
 pid.writePID('neopixel') #filename is referenced by twitch_onair_webserver - make sure these are synchronized
 
