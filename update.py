@@ -27,7 +27,7 @@ def CheckUpdateNeeded():
 		pass
 
 	try:
-		os.system('wget https://raw.githubusercontent.com/europaYuu/RaspiTwitchONAIR/main/VERSION -P /home/pi/temp//')
+		os.system('wget https://raw.githubusercontent.com/europaYuu/RaspiTwitchONAIR/main/VERSION -P /home/pi/temp/')
 		version_local = getVersion('VERSION')
 		version_remote = getVersion('/temp/VERSION')
 
