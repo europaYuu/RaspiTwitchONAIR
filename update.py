@@ -79,12 +79,6 @@ def Update():
 	os.system('sudo apt-get upgrade')
 
 	print('\n/////////////////////////////////')
-	print('Installing Dependencies...')
-	print('/////////////////////////////////')
-	print(' ')
-	os.system('sudo python3 twitch_install_dependencies.py')
-
-	print('\n/////////////////////////////////')
 	print('Cloning Files From Git...')
 	print('/////////////////////////////////')
 	print(' ')

@@ -589,9 +589,13 @@ def checkUpdate():
 
 @app.route('/update', methods=['GET', 'POST'])
 def Update():
-    update.Update()
-    update.CleanUpRemoteVersion()
-    return render_template('bye.html', message="Restarting...")
+    return render_template('doupdate.html', message="Updating...")
+
+@app.route('/doUpdate', methods=['GET', 'POST'])
+def doUpdate():
+    os.system('sudo python3 doUpdate.py')
+    os.system('sudo shutdown -r now')
+    return render_template('../', message="Updating...")
 
 if __name__ == '__main__':
     app.run(host='0.0.0.0', port=SERVER_PORT)
