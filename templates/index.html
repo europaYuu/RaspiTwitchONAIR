@@ -136,6 +136,10 @@
 <input class="button" type="submit" id="restart" name = "restart" value="Restart Device">
 </form>
 
+<form action="/checkupdate" method="POST" onsubmit="return confirm('Check for Updates?');">
+<input class="button" type="submit" id="checkupdate" name = "checkupdate" value="Check Update">
+</form>
+
 <form action="/reset" method="POST" onsubmit="return confirm('Reset configuration to defaults? This action cannot be undone.');">
 <input class="button" type="submit" id="reset" name = "reset" value="Reset">
 </form>

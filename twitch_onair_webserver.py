@@ -19,6 +19,7 @@ import json
 import time
 import socket
 import pid
+import update
 
 ###### Misc
 def clamp(n, smallest, largest): return max(smallest, min(n, largest))
@@ -575,6 +576,22 @@ def deltoken():
     deleteToken()
 
     return render_template('bye.html', message="Refreshing Token...")
+
+@app.route('/checkupdate', methods=['GET', 'POST'])
+def checkUpdate():
+
+    print('Checking for Updates...')
+    if update.CheckUpdateNeeded():
+        return render_template('update.html', message="New Version: " + update.GetRemoteVersion() + " Update Now?")
+
+    else:
+        return render_template('bye.html', message="No Update Needed")
+
+@app.route('/update', methods=['GET', 'POST'])
+def Update():
+    update.Update()
+    update.CleanUpRemoteVersion()
+    return render_template('bye.html', message="Restarting...")
 
 if __name__ == '__main__':
     app.run(host='0.0.0.0', port=SERVER_PORT)
