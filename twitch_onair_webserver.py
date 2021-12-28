@@ -69,6 +69,7 @@ led_brightness = "0.3"
 placeholder_secret = "*****" #not stored
 num_rows = "3"
 num_columns = "8"
+TARGET_FRAMERATE = 20 # For effects that take a time input
 
 # Debug Log. set to True if you want debug file output
 def tryMakeLogDir():
@@ -294,6 +295,10 @@ def deleteToken():
         pass
     #writeChangeFile()
 
+def getTickLength(framerateDivider=1.0):
+    global TARGET_FRAMERATE
+    return 1.0 / ( float(TARGET_FRAMERATE) / framerateDivider )
+
 def pixelClear():
     tryLoadConfig()
     pixels = neopixel.NeoPixel(
@@ -371,16 +376,45 @@ def pixelSequential(color=(255,98,0), length=2.0, fadeLength=4, reverse=False, c
     if not hold:
         pixelClear()
 
+### Draw rainbow
+# 0 = horizontal, 1 = vertical
+def drawRainbow(offset=0.0,scale=1.0, direction=0):
+    global num_pixels
+    global num_rows
+    direction = clamp(direction, 0, 1) #never trust the users, they are evil
+    for x in range(num_pixels):
+        u = ( stripToUV(x) )[direction]
+        u = u / ( 1 + (1 / num_rows) )
+        u = u * scale
+        u = u + offset
+        colorResult = hsv2rgb(u,1.0,1.0)
+        pixels[x] = colorResult
+    pixels.show()
+
+### Scrolling Rainbow
+def drawAnimateRainbow(length=1.0, framerateDivider=1.0, scale=1.0, reverse=False, direction=0):
+    tick = getTickLength(framerateDivider=framerateDivider)
+    loops = int( length / tick)
+    for i in range(loops):
+        a = float(i) / float(loops)
+        if reverse:
+            a = 1 - a
+        drawRainbow(offset=a, scale=scale, direction=direction)
+        time.sleep(tick)
+
 def tryKillNeopixelService():
     print('twitch_onair_webserver: Killing Neopixel Service...')
-    pidResult = pid.tryReadPID('neopixel')
-    if pidResult >= 0:
-        pid.killPIDWithScript(pidResult, script='twitch_onair_neopixel.py')
-        pixelSequential(length=1.0, reverse=True)
-        pixelClear()
-        pid.delPID('neopixel')
-    else:
-        pass
+    #pidResult = pid.tryReadPID('neopixel')
+    #if pidResult >= 0:
+    #    pid.killPIDWithScript(pidResult, script='twitch_onair_neopixel.py')
+    #    pixelSequential(length=1.0, reverse=True)
+    #    pixelClear()
+    #    pid.delPID('neopixel')
+    #else:
+    #    pass
+    os.system('sudo systemctl stop twitch_onair_neopixel_service.service')
+    pixelSequential(length=1.0, reverse=True)
+    pixelClear()
 
 def startNeopixelService():
     print('twitch_onair_webserver: Starting Neopixel Service...')
@@ -594,6 +628,8 @@ def Update():
 @app.route('/doupdate', methods=['GET', 'POST'])
 def doUpdate():
     if update.CheckUpdateNeeded():
+        tryKillNeopixelService()
+        drawAnimateRainbow(length=3.0)
         os.system('sudo python3 doUpdate.py')
         os.system('sudo shutdown -r now')
 
