@@ -21,9 +21,40 @@ import socket
 import pid
 import update
 
+import colorsys
+
+###### neopixels - just so we can shut it down if needed
+import board
+import neopixel
+
 ###### Misc
 def clamp(n, smallest, largest): return max(smallest, min(n, largest))
 def saturate(n): return clamp(n, 0,255) # I miss HLSL
+def lerp(a=1.0, b=1.0, f=0.5): return (a * (1.0 - f)) + (b * f);
+
+### 2D Vector Distance
+def distance2D(vec1=(0.0,0.0),vec2=(0.0,0.0)):
+    vec1x = vec1[0]
+    vec1y = vec1[1]
+    vec2x = vec2[0]
+    vec2y = vec2[1]
+
+    a = (vec2x-vec1x) ** 2.0
+    b = (vec2y-vec1y) ** 2.0
+    ab = a + b
+    abClamp = clamp(ab, 0.0001, ab)
+
+    return math.sqrt(abClamp)
+
+def hsv2rgb(h,s,v):
+    return tuple(round(i * 255) for i in colorsys.hsv_to_rgb(h,s,v))
+
+def rgb2hsv(r,g,b):
+    rf = float(r)
+    gf = float(g)
+    bf = float(b)
+    rgb = ( (rf / 255.0), (gf / 255.0), (bf / 255.0) )
+    return colorsys.rgb_to_hsv( rgb[0], rgb[1], rgb[2] )
 
 import socket
 testIP = "8.8.8.8"
@@ -84,6 +115,15 @@ tryMakeLogDir()
 
 ENABLE_DEBUG_LOG = False
 DEBUG_LOG_FILENAME = 'logs/twitch_onair_webserver_log.txt'
+
+#default config
+pixels = neopixel.NeoPixel(
+    board.D18,
+    24,
+    brightness=0.3,
+    auto_write=False,
+    pixel_order=ORDER
+    )
 
 def tryMakeConfigDir():
     current_path = os.getcwd()
@@ -295,9 +335,35 @@ def deleteToken():
         pass
     #writeChangeFile()
 
+# Used to check even / odd rows of pixels since the wiring makes the X-direction alternate
+def isEven(num): return ( (num % 2) == 0 )
+
 def getTickLength(framerateDivider=1.0):
     global TARGET_FRAMERATE
     return 1.0 / ( float(TARGET_FRAMERATE) / framerateDivider )
+
+### Pixel Index to Screen UV
+# Returns normalized screen space coordinates from a pixel strip ID input
+def stripToUV(pixel=0):
+    global num_pixels
+    global num_rows
+    global num_columns
+
+    fpixel = float(pixel)
+    fnum_rows = float(num_rows)
+    fnum_columns = float(num_columns)
+
+    posy = ( fnum_rows / (fnum_rows - 1.0) ) * ( float( int(fpixel / num_columns) ) / fnum_rows )
+    posx = ( ( fnum_columns / (fnum_columns - 1.0) ) * ( fpixel % fnum_columns ) ) / fnum_columns 
+    
+    row = int( int(posy * fnum_rows) )
+    if row != num_rows:
+        row += 1
+
+    if isEven( row ):
+        posx = 1.0 - posx
+
+    return (posx,posy)
 
 def pixelClear():
     tryLoadConfig()
@@ -630,6 +696,7 @@ def doUpdate():
     if update.CheckUpdateNeeded():
         tryKillNeopixelService()
         drawAnimateRainbow(length=3.0)
+        pixelClear()
         os.system('sudo python3 doUpdate.py')
         os.system('sudo shutdown -r now')
 
