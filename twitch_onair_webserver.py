@@ -589,7 +589,7 @@ def checkUpdate():
 
 @app.route('/update', methods=['GET', 'POST'])
 def Update():
-    return render_template('doupdate.html', message="Updating...")
+    return render_template('doupdate.html', message="Updating... Please don't refresh this page or go back in your browser.")
 
 @app.route('/doupdate', methods=['GET', 'POST'])
 def doUpdate():
