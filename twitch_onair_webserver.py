@@ -492,6 +492,7 @@ def restartSystemLED():
 
 ###### Startup
 tryLoadConfig()
+version_local = update.getVersion('VERSION')
 
 ###### Flask webapp
 app = Flask(__name__, static_url_path='',
@@ -575,7 +576,8 @@ def index():
             neon_color2=live_color_hex,
             brightness_value=led_brightness,
             num_rows_value=num_rows,
-            num_columns_value=num_columns
+            num_columns_value=num_columns,
+            version=version_local
             )
 
     else:
@@ -605,7 +607,8 @@ def index():
             neon_color2=live_color_hex,
             brightness_value=led_brightness,
             num_rows_value=num_rows,
-            num_columns_value=num_columns
+            num_columns_value=num_columns,
+            version=version_local
             )
 
 @app.route('/reset', methods=['GET', 'POST'])
@@ -667,7 +670,8 @@ def killLED():
         neon_color2=live_color_hex,
         brightness_value=led_brightness,
         num_rows_value=num_rows,
-        num_columns_value=num_columns
+        num_columns_value=num_columns,
+        version=version_local
         )
 
 @app.route('/deltoken', methods=['GET', 'POST'])
@@ -725,7 +729,8 @@ def doUpdate():
         neon_color2=live_color_hex,
         brightness_value=led_brightness,
         num_rows_value=num_rows,
-        num_columns_value=num_columns
+        num_columns_value=num_columns,
+        version=version_local
         )
 
 if __name__ == '__main__':

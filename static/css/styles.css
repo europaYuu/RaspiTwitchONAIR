@@ -83,6 +83,13 @@ h4 {
 	color: darkslateblue;
 }
 
+h5 {
+	text-align: center;
+	margin-top: 4px;
+	font-size: 12pt;
+	color: lightgray;
+}
+
 .subheader {
 	margin-bottom: 12px;
 }
