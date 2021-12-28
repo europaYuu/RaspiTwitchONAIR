@@ -35,6 +35,25 @@ import pid #store PID in file so webserver can kill if needed
 import board
 import neopixel
 
+######## Connect to OLED Service
+import rpyc
+oled_service_connected = False
+try:
+	c = rpyc.connect("localhost", 18861)
+	oled_service_connected = True
+except:
+	pass
+
+def tryOLedMessage(text, displayTime=1.0):
+	global c
+	global oled_service_connected
+	try:
+		c = rpyc.connect("localhost", 18861)
+		oled_service_connected = True
+		c.root.ExDrawTextBorder(text, displayTime)
+	except:
+		pass
+
 #######################################
 ############ CONFIGURATION ############
 #######################################
@@ -706,6 +725,7 @@ def pixelAuthSuccess(wait=0.0):
 	time.sleep(wait)
 	ASYNC_LED_STATE = 'IDLE'
 	time.sleep(0.5)
+	tryOLedMessage('CONNECTED', 0.5)
 	pixelFlash((0,255,0),4,0.1,0.1)
 
 # Stream went ONLINE but previously was offline
@@ -799,6 +819,7 @@ def createTokenFile():
 	else:
 		printLog(str(ResponseJson))
 		printLog('createTokenFile(): Error Creating Token')
+		#tryOLedMessage('Error Creating Token', 0.25)
 		#pixelError() main loop already calls this
 
 	time.sleep(0.5) #Just in case, probably not necessary
@@ -830,6 +851,7 @@ def isLive(user_login):
 
 		else:
 			printLog('Token is stale, fetching new access token. age: ' + str(token_age) + ' days. Verbose token age: [' + str(token_age_verbose) +']' )
+			tryOLedMessage('Fetch New Token')
 			createTokenFile()
 			if tokenFileExist():
 				app_access_token = openTokenFile(1)
@@ -837,6 +859,7 @@ def isLive(user_login):
 
 	else:
 		printLog('Token doesn\'t exist. fetching new access token')
+		tryOLedMessage('Fetch New Token')
 		createTokenFile()
 		if tokenFileExist():
 			app_access_token = openTokenFile(1)
@@ -895,6 +918,7 @@ def debugLive(user_login):
 		printLog(user_login + ' is offline')
 	else:
 		printLog('main: Authentication Error')
+		tryOLedMessage('Authentication Error')
 		
 ###### Stop
 def stopLive():
@@ -932,7 +956,27 @@ def tryKillNeopixelService():
 
 pid.writePID('neopixel') #filename is referenced by twitch_onair_webserver - make sure these are synchronized
 
+####### Launch OLED Service
+def kill_oled_service():
+    try:
+        oled_pid = os.system('pgrep -f oled.py')
+        os.system('pkill -9 -f oled_pid')
+    except:
+        pass
+
+#kill_oled_service()
+
+class LaunchOLED(Thread):
+	def __init__(self):
+		Thread.__init__(self)
+		self.daemon = True
+		self.start()
+	def run(self):
+		os.system('sudo python3 /home/pi/oled.py')
+
 pixelStart()
+
+tryOLedMessage('Neopixels Started')
 
 ########
 ######## Main Loop
@@ -956,7 +1000,7 @@ class Main(Thread):
 
 				if checkConfigUpdate():
 					pixelClear()
-
+					tryOLedMessage('Config Updated')
 					pixelHorizontalWipe(color=live_color,length=0.25)
 					time.sleep(0.2)
 					pixelFadeOut(color=live_color,length=0.25)
@@ -966,6 +1010,7 @@ class Main(Thread):
 					printLog(user_login + ' is live')
 					if previous_live != live: #Did our live status change from the last check?
 						printLog('Live status has changed, calling pixelLiveChanged()')
+						tryOLedMessage('Stream Online')
 						pixelLiveChanged()
 					else:
 						pixelFlood(live_color)
@@ -973,6 +1018,7 @@ class Main(Thread):
 					printLog(user_login + ' is offline')
 					if previous_live != live: #Did our live status change from the last check?
 						printLog('Live Status changed, calling PixelOffChanged()')
+						tryOLedMessage('Stream Offline')
 						pixelOffChanged()
 						time.sleep(0.5)
 						pixelFadeIn(off_color, 0.5)
@@ -981,6 +1027,7 @@ class Main(Thread):
 						pixelFlood(off_color)
 				else:
 					printLog('main(): Authentication Error')
+					tryOLedMessage('Authentication Error')
 					pixelError()
 
 				previous_live = live
@@ -1009,6 +1056,7 @@ class AsyncLED(Thread):
 			try:
 				# Authenticating
 				if ASYNC_LED_STATE == 'AUTH':
+					tryOLedMessage('AUTHENTICATING', 0.5)
 					drawRipple(color=(148,0,255), startRadius=0.0, endRadius=4.0, length=0.2, framerateDivider=1.0, reverse=False)
 					if ASYNC_LED_STATE == 'AUTH': time.sleep(0.1)
 					else: pass
@@ -1022,6 +1070,7 @@ class AsyncLED(Thread):
 				printLog('Exception occured in AsyncLED(). Will try again next tick')
 				time.sleep(0.5)
 
+#LaunchOLED()
 Main()
 AsyncLED()
 while True:

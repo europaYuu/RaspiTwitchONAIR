@@ -100,6 +100,8 @@ def Update():
 	os.system('mv -v ' + path + '/RaspiTwitchONAIR/* ' + path)
 	os.system('rm -rf ' + path + '/RaspiTwitchONAIR/')
 
+	os.system('sudo python3 /home/pi/twitch_install_services.py')
+
 def RebootAfterUpdate():
 	global path
 	print('\n/////////////////////////////////')

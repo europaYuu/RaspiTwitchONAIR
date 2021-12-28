@@ -27,6 +27,25 @@ import colorsys
 import board
 import neopixel
 
+######## Connect to OLED Service
+import rpyc
+oled_service_connected = False
+try:
+    c = rpyc.connect("localhost", 18861)
+    oled_service_connected = True
+except:
+    pass
+
+def tryOLedMessage(text, displayTime=1.0):
+    global c
+    global oled_service_connected
+    try:
+        c = rpyc.connect("localhost", 18861)
+        oled_service_connected = True
+        c.root.ExDrawTextBorder(text, displayTime)
+    except:
+        pass
+
 ###### Misc
 def clamp(n, smallest, largest): return max(smallest, min(n, largest))
 def saturate(n): return clamp(n, 0,255) # I miss HLSL
@@ -320,6 +339,7 @@ def deleteConfig():
     try:
         os.remove('config/twitch_onair_config.json')
         print('Saved Config Deleted')
+        tryOLedMessage('Config Deleted')
     except:
         print('Failed to delete Saved Config. Does it exist?')
         pass
@@ -330,6 +350,7 @@ def deleteToken():
     try:
         os.remove('config/twitch_appaccesstoken.json')
         print('App Access Token Deleted')
+        tryOLedMessage('Token Deleted')
     except:
         print('Unable to delete App Access Token. Does it exist?')
         pass
@@ -497,6 +518,8 @@ def restartSystemLED():
 tryLoadConfig()
 version_local = update.getVersion('VERSION')
 
+tryOLedMessage( ('Server: v' + version_local) , 3.0)
+
 ###### Flask webapp
 app = Flask(__name__, static_url_path='',
     static_folder='static')
@@ -618,6 +641,7 @@ def index():
 def reset():
 
     deleteConfig()
+    tryOLedMessage('Reset')
     setDefaults()
 
     return render_template('bye.html', message="Configuration Reset")
@@ -626,6 +650,7 @@ def reset():
 def restart():
 
     print('restart')
+    tryOLedMessage('Restarting...')
     tryKillNeopixelService()
     time.sleep(1.0)
     pixelClear()
@@ -688,6 +713,7 @@ def deltoken():
 def checkUpdate():
 
     print('Checking for Updates...')
+    tryOLedMessage('Check Update')
     if update.CheckUpdateNeeded():
         return render_template('update.html', message="New Version: " + update.GetRemoteVersion() + " Update Now?")
 
@@ -701,6 +727,7 @@ def Update():
 @app.route('/doupdate', methods=['GET', 'POST'])
 def doUpdate():
     if update.CheckUpdateNeeded():
+        tryOLedMessage('Updating...')
         tryKillNeopixelService()
         drawAnimateRainbow(length=3.0)
         pixelClear()

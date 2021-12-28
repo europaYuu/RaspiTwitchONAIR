@@ -21,6 +21,24 @@ import board
 import neopixel
 import json
 
+######## Connect to OLED Service
+import rpyc
+oled_service_connected = False
+try:
+	c = rpyc.connect("localhost", 18861)
+	oled_service_connected = True
+except:
+	pass
+
+def tryOLedMessage(text, displayTime=1.0):
+	global c
+	global oled_service_connected
+	try:
+		c = rpyc.connect("localhost", 18861)
+		oled_service_connected = True
+		c.root.ExDrawTextBorder(text, displayTime)
+	except:
+		pass
 
 SHUTDOWN_TIME = 5.0 # How long to hold for shutdown sequence
 
@@ -71,22 +89,30 @@ def pixelOff():
 
 def tryKillNeopixelService():
     print('powerButton: Killing Neopixel Service...')
-    pidResult = pid.tryReadPID('neopixel')
-    if pidResult >= 0:
-        os.system('sudo kill ' + str(pidResult))
-        pid.delPID('neopixel')
-    else:
-        pass
+    #pidResult = pid.tryReadPID('neopixel')
+    #if pidResult >= 0:
+    #    os.system('sudo kill ' + str(pidResult))
+    #    pid.delPID('neopixel')
+    #else:
+    #    pass
+    try:
+        os.system('sudo systemctl stop twitch_onair_neopixel_service.service')
+    except:
+    	pass
     pixelOff()
 
 def tryKillWebService():
     print('powerButton: Killing Web Service...')
-    pidResult = pid.tryReadPID('webserver')
-    if pidResult >= 0:
-        os.system('sudo kill ' + str(pidResult))
-        pid.delPID('webserver')
-    else:
-        pass
+    #pidResult = pid.tryReadPID('webserver')
+    #if pidResult >= 0:
+    #    os.system('sudo kill ' + str(pidResult))
+    #    pid.delPID('webserver')
+    #else:
+    #    pass
+    try:
+        os.system('sudo systemctl stop twitch_onair_webserver_service.service')
+    except:
+    	pass
 
 def killServices():
 	tryKillWebService()
@@ -100,6 +126,7 @@ def restart():
 	input_block	= True # Comment this out if testing button hold logic
 	killServices()
 	print('Restarting...')
+	tryOLedMessage('Restarting...')
 	time.sleep(1.0)
 	GPIO.cleanup()
 	os.system('sudo shutdown -r now')
@@ -108,9 +135,12 @@ def shutdown():
 	input_block = True # Comment this out if testing button hold logic
 	killServices()
 	print('Shutting Down...')
+	tryOLedMessage('Shutting Down...')
 	time.sleep(1.0)
 	GPIO.cleanup()
 	os.system('sudo shutdown -h now')
+
+tryOLedMessage('PowerButton Started')
 
 try:
 	while not input_block:
@@ -130,6 +160,8 @@ try:
 
 			else:
 				print('Hold power button for ' + str( abs(remaining_time) ) + ' more seconds to shutdown')
+				#oledString = ( str( abs(remaining_time) ) + "s to OFF" )
+				#tryOLedMessage( oledString , 0.5 )
 
 		else:
 			if pressed:

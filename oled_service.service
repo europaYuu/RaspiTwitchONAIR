@@ -1,0 +1,16 @@
+[Unit]
+Description=OLED Service
+After=network.target
+
+[Service]
+ExecStart=/usr/bin/python3 /home/pi/oled.py
+WorkingDirectory=/home/pi
+StandardOutput=inherit
+StandardError=inherit
+Restart=on-failure
+RestartSec=20
+User=root
+Group=root
+
+[Install]
+WantedBy=multi-user.target
