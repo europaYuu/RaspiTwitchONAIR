@@ -912,14 +912,18 @@ def stopLive():
 
 # Only allow a single instance of this
 def tryKillNeopixelService():
-	print('twitch_onair_neopixel: Killing Neopixel Service...')
-	pidResult = pid.tryReadPID('neopixel')
-	if pidResult >= 0:
-		pid.killPIDWithScript( ( pid.tryReadPID('neopixel') ), script='twitch_onair_neopixel.py')
-		pixelClear()
-		pid.delPID('neopixel')
-	else:
-		pass
+    print('twitch_onair_webserver: Killing Neopixel Service...')
+    #pidResult = pid.tryReadPID('neopixel')
+    #if pidResult >= 0:
+    #    pid.killPIDWithScript(pidResult, script='twitch_onair_neopixel.py')
+    #    pixelSequential(length=1.0, reverse=True)
+    #    pixelClear()
+    #    pid.delPID('neopixel')
+    #else:
+    #    pass
+    os.system('sudo systemctl stop twitch_onair_neopixel_service.service')
+    pixelSequential(length=1.0, reverse=True)
+    pixelClear()
 
 tryKillNeopixelService()
 
