@@ -61,16 +61,35 @@ client_id = "<CLIENT_ID>"
 client_secret = "<CLIENT_SECRET>"
 token_stale_age = "30"
 update_interval = "10"
-num_pixels = "4"
+num_pixels = "24"
 live_color = "(255,0,0)"
+off_color = "(0,0,0)"
 led_brightness = "0.3"
 placeholder_secret = "*****" #not stored
 num_rows = "3"
 num_columns = "8"
 
 # Debug Log. set to True if you want debug file output
+def tryMakeLogDir():
+    current_path = os.getcwd()
+    path = current_path + '/logs'
+    try:
+        os.mkdir(path, 0o777)
+    except:
+        pass
+
+tryMakeLogDir()
+
 ENABLE_DEBUG_LOG = False
 DEBUG_LOG_FILENAME = 'logs/twitch_onair_webserver_log.txt'
+
+def tryMakeConfigDir():
+    current_path = os.getcwd()
+    path = current_path + '/config'
+    try:
+        os.mkdir(path, 0o777)
+    except:
+        pass
 
 #######################################
 ########## END CONFIGURATION ##########
@@ -88,6 +107,7 @@ def setDefaults():
     global update_interval
     global num_pixels
     global live_color
+    global off_color
     global led_brightness
     global num_rows
     global num_columns
@@ -97,8 +117,9 @@ def setDefaults():
     client_secret = "<CLIENT_SECRET>"
     token_stale_age = "30"
     update_interval = "10"
-    num_pixels = "4"
+    num_pixels = "24"
     live_color = "(255,0,0)"
+    off_color = "(0,0,0)"
     led_brightness = "0.3"
 
 ######## DEBUG LOG ########
@@ -130,7 +151,7 @@ def hex_to_rgb(hex):
   return tuple(rgb)
 
 def rgb_to_hex(r, g, b):
-  return '#%02x%02x%02x' % (r, g, b)
+    return '#%02x%02x%02x' % (r, g, b)
 
 ###### check for config file
 def tryLoadConfig():
@@ -141,12 +162,14 @@ def tryLoadConfig():
     global update_interval
     global num_pixels
     global live_color
+    global off_color
     global led_brightness
     global num_rows
     global num_columns
 
     json_read_error = 'Webserver: Error reading key value. Default key value used for '
 
+    tryMakeConfigDir()
     config_file_exists = os.path.isfile('config/twitch_onair_config.json')
     if config_file_exists:
 
@@ -198,6 +221,11 @@ def tryLoadConfig():
                     printLog(json_read_error + 'live_color')
 
                 try:
+                    off_color = eval( str(configData['off_color'] ) )
+                except:
+                    printLog(json_read_error + 'off_color')
+
+                try:
                     led_brightness = eval( configData['led_brightness'] )
                 except:
                     printLog(json_read_error + 'led_brightness')
@@ -236,6 +264,7 @@ def writeConfig():
         'update_interval': update_interval,
         'num_pixels': num_pixels,
         'live_color': live_color,
+        'off_color': off_color,
         'led_brightness': led_brightness,
         'num_rows': num_rows,
         'num_columns': num_columns
@@ -376,6 +405,7 @@ def index():
     global update_interval
     global num_pixels
     global live_color
+    global off_color
     global led_brightness
     global num_rows
     global num_columns
@@ -399,13 +429,6 @@ def index():
         update_interval = request.form['update_interval']
         num_pixels = request.form['num_pixels'][:9]
         
-        # old logic for color
-        #live_color = (
-            #saturate( int(request.form['live_color_r'][:3]) ),
-            #saturate( int(request.form['live_color_g'][:3]) ),
-            #saturate( int(request.form['live_color_b'][:3]) ),
-            #)
-        
         led_brightness = request.form['led_brightness']
 
         # hex -> rgb
@@ -417,10 +440,26 @@ def index():
             saturate( live_color[2] )
             )
 
+        off_color_picker_hex = ( request.form['off_color_picker'] )[1:]
+        off_color = hex_to_rgb(off_color_picker_hex)
+        off_color = (
+            saturate( off_color[0] ),
+            saturate( off_color[1] ),
+            saturate( off_color[2] )
+            )
+
         writeConfig()
         tryLoadConfig()
 
-        live_color_hex = rgb_to_hex( (live_color[0]),(live_color[1]),(live_color[2]) )
+        try:
+            live_color_hex = rgb_to_hex( (live_color[0]),(live_color[1]),(live_color[2]) )
+        except:
+            live_color_hex = "#ff0000"
+
+        try:
+            off_color_hex = rgb_to_hex( (off_color[0]),(off_color[1]),(off_color[2]) )
+        except:
+            off_color_hex = "#000000"
 
         return render_template('index.html',
             user_login_value=user_login,
@@ -429,10 +468,8 @@ def index():
             token_stale_age_value=token_stale_age,
             update_interval_value=update_interval,
             num_pixels_value=num_pixels,
-            #live_color_r_value=live_color[0],
-            #live_color_g_value=live_color[1],
-            #live_color_b_value=live_color[2],
             live_color_picker_value=live_color_hex,
+            off_color_picker_value=off_color_hex,
             neon_color=live_color_hex,
             neon_color2=live_color_hex,
             brightness_value=led_brightness,
@@ -443,7 +480,16 @@ def index():
     else:
         tryLoadConfig()
 
-        live_color_hex = rgb_to_hex( (live_color[0]),(live_color[1]),(live_color[2]) )
+        try:
+            live_color_hex = rgb_to_hex( (live_color[0]),(live_color[1]),(live_color[2]) )
+            #print(live_color_hex)
+        except:
+            live_color_hex = "#ff0000"
+
+        try:
+            off_color_hex = rgb_to_hex( (off_color[0]),(off_color[1]),(off_color[2]) )
+        except:
+            off_color_hex = "#000000"
 
         return render_template('index.html',
             user_login_value=user_login,
@@ -452,10 +498,8 @@ def index():
             token_stale_age_value=token_stale_age,
             update_interval_value=update_interval,
             num_pixels_value=num_pixels,
-            #live_color_r_value=live_color[0],
-            #live_color_g_value=live_color[1],
-            #live_color_b_value=live_color[2],
             live_color_picker_value=live_color_hex,
+            off_color_picker_value=off_color_hex,
             neon_color=live_color_hex,
             neon_color2=live_color_hex,
             brightness_value=led_brightness,
@@ -499,7 +543,15 @@ def killLED():
 
     tryLoadConfig()
 
-    live_color_hex = rgb_to_hex( (live_color[0]),(live_color[1]),(live_color[2]) )
+    try:
+        live_color_hex = rgb_to_hex( (live_color[0]),(live_color[1]),(live_color[2]) )
+    except:
+            live_color_hex = "#ff0000"
+
+    try:
+        off_color_hex = rgb_to_hex( (off_color[0]),(off_color[1]),(off_color[2]) )
+    except:
+        off_color_hex = "#000000"
 
     return render_template('index.html',
         user_login_value=user_login,
@@ -508,10 +560,8 @@ def killLED():
         token_stale_age_value=token_stale_age,
         update_interval_value=update_interval,
         num_pixels_value=num_pixels,
-        #live_color_r_value=live_color[0],
-        #live_color_g_value=live_color[1],
-        #live_color_b_value=live_color[2],
         live_color_picker_value=live_color_hex,
+        off_color_picker_value=off_color_hex,
         neon_color=live_color_hex,
         neon_color2=live_color_hex,
         brightness_value=led_brightness,

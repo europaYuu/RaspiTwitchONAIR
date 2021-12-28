@@ -44,7 +44,7 @@ import neopixel
 pixel_pin = board.D18
 
 # The number of NeoPixels
-num_pixels = 30
+num_pixels = 24
 
 # The order of the pixel colors - RGB or GRB. Some NeoPixels have red and green reversed!
 # For RGBW NeoPixels, simply change the ORDER to RGBW or GRBW.
@@ -83,6 +83,9 @@ user_login = 'europayuu'
 #default light color when live
 live_color = (255,255,255)
 
+#default light color when off
+off_color = (0,0,0)
+
 #max brightness to limit power consumption and heat - match with twitch_onair_webserver.py
 MAX_HARDWARE_BRIGHTNESS = 0.33
 
@@ -96,8 +99,35 @@ num_columns = 8
 TARGET_FRAMERATE = 20 # For effects that take a time input
 
 # Debug Log. set to True if you want debug file output
+def tryMakeLogDir():
+	current_path = os.getcwd()
+	path = current_path + '/logs'
+	try:
+		os.mkdir(path, 0o777)
+	except:
+		pass
+
+tryMakeLogDir()
+
 ENABLE_DEBUG_LOG = False
 DEBUG_LOG_FILENAME = 'logs/twitch_onair_neopixel_log.txt'
+
+#default config
+pixels = neopixel.NeoPixel(
+	pixel_pin,
+	num_pixels,
+	brightness=led_brightness,
+	auto_write=False,
+	pixel_order=ORDER
+	)
+
+def tryMakeConfigDir():
+	current_path = os.getcwd()
+	path = current_path + '/config'
+	try:
+		os.mkdir(path, 0o777)
+	except:
+		pass
 
 #######################################
 ########## END CONFIGURATION ##########
@@ -195,12 +225,14 @@ def tryLoadConfig():
 	global update_interval
 	global num_pixels
 	global live_color
+	global off_color
 	global led_brightness
 	global pixels
 	global MAX_HARDWARE_BRIGHTNESS
 
 	json_read_error = 'Error reading key value. Default key value used for '
 
+	tryMakeConfigDir()
 	config_file_exists = os.path.isfile('config/twitch_onair_config.json')
 	if config_file_exists:
 
@@ -250,6 +282,11 @@ def tryLoadConfig():
 					live_color = eval( str(configData['live_color'] ) )
 				except:
 					printLog(json_read_error + 'live_color')
+
+				try:
+					off_color = eval( str(configData['off_color'] ) )
+				except:
+					printLog(json_read_error + 'off_color')
 
 				try:
 					led_brightness = eval( configData['led_brightness'] )
@@ -512,8 +549,10 @@ def pixelFlash(color=(255,255,255), numFlashes=4, onTime=0.1, offTime=0.1):
 # Random flashing
 def pixelRandom( color=(255,255,255 ), numIterations=8, flashDots= 3, onTime=0.05, offTime=0.1 ):
 	i = 0
+	flashDots = clamp(flashDots, 1, num_pixels-1)
+	#print('numIterations: ' + str(numIterations) + ' flashDots: ' + str(flashDots) + ' num_pixels: ' + str(num_pixels))
 	while i < numIterations:
-		randomdots = random.sample( range( 0, (num_pixels-1) ), flashDots)
+		randomdots = random.sample( range( 0, (num_pixels) ), flashDots)
 		for x in randomdots:
 			try:
 				pixels[x] = color
@@ -928,8 +967,11 @@ class Main(Thread):
 					if previous_live != live: #Did our live status change from the last check?
 						printLog('Live Status changed, calling PixelOffChanged()')
 						pixelOffChanged()
+						time.sleep(0.5)
+						pixelFadeIn(off_color, 0.5)
 					else:
-						pixelClear()
+						#pixelClear()
+						pixelFlood(off_color)
 				else:
 					printLog('main(): Authentication Error')
 					pixelError()

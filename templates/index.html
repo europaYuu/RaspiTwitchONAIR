@@ -64,6 +64,11 @@
 </div>
 
 <div class="fieldHolder">
+   <label for="off_color_picker">Off Color</label>
+   <span><input type="color" id="off_color_picker" name="off_color_picker" value ="{{off_color_picker_value}}"></span>
+</div>
+
+<div class="fieldHolder">
    <label for="led_brightness">Brightness</label>
    <span><input type="range" min="0.025" max="1.0" step="0.025" id="led_brightness" name="led_brightness" value ="{{brightness_value}}"></span>
 </div>
@@ -115,8 +120,12 @@
 <h2 class="subheader">Troubleshooting</h2>
 
 <div class="buttonsHolder">
-<form action="/restartled" method="POST" onsubmit="return confirm('Restart LEDs?');">
+<!--<form action="/restartled" method="POST" onsubmit="return confirm('Restart LEDs?');">
 <input class="button" type="submit" id="restartled" name = "restartled" value="Restart LEDs">
+</form>-->
+
+<form action="/deltoken" method="POST" onsubmit="return confirm('Refresh the Twitch App Access token? This can fix some authentication issues.');">
+<input class="button" type="submit" id="deltoken" name = "deltoken" value="Refresh Token">
 </form>
 
 <!--<form action="/killled" method="POST">
@@ -131,9 +140,9 @@
 <input class="button" type="submit" id="reset" name = "reset" value="Reset">
 </form>
 
-<form action="/deltoken" method="POST" onsubmit="return confirm('Refresh the Twitch App Access token? This can fix some authentication issues.');">
+<!--<form action="/deltoken" method="POST" onsubmit="return confirm('Refresh the Twitch App Access token? This can fix some authentication issues.');">
 <input class="button" type="submit" id="deltoken" name = "deltoken" value="Refresh Token">
-</form>
+</form>-->
 </div><!--form-->
 
    </div> <!--sub holder-->

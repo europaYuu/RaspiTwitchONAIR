@@ -1,11 +1,21 @@
 import os
 import subprocess
 
+def tryMakeTempdir():
+	current_path = os.getcwd()
+	path = current_path + '/temp'
+	try:
+		os.mkdir(path, 0o777)
+	except:
+		pass
+
 def get_pname(id):
-    p = subprocess.Popen(["ps -o cmd= {}".format(id)], stdout=subprocess.PIPE, shell=True)
-    return str(p.communicate()[0])
+	tryMakeTempdir()
+	p = subprocess.Popen(["ps -o cmd= {}".format(id)], stdout=subprocess.PIPE, shell=True)
+	return str(p.communicate()[0])
 
 def tryReadPID(filename):
+	tryMakeTempdir()
 	filename = ('temp/pid_' + filename + '.txt')
 	print('attempting to read PID for ' + filename)
 	file_exists = os.path.isfile(filename)
@@ -18,6 +28,7 @@ def tryReadPID(filename):
 		return -1
 
 def writePID(filename):
+	tryMakeTempdir()
 	delPID(filename) # delete if it already exists
 	pid = os.getpid()
 	print('Writing PID: ' + str(pid) + ' to pid_' + filename + '.txt')
@@ -26,6 +37,7 @@ def writePID(filename):
 	f.close()
 
 def delPID(filename):
+	tryMakeTempdir()
 	filename_combined = ( 'temp/pid_' + filename + '.txt' )
 	print('Attempting to delete ' + filename_combined)
 	try:
@@ -35,6 +47,7 @@ def delPID(filename):
 		print(filename_combined + ' failed to delete. Does it exist?')
 
 def getProcessByPID(pid="0"):
+	tryMakeTempdir()
 	name = get_pname( pid )
 	if len(name) > 3: #process found
 		return name
@@ -42,6 +55,7 @@ def getProcessByPID(pid="0"):
 		return -1
 
 def killPIDWithScript(pid=0, name="python3", script="test.py"):
+	tryMakeTempdir()
 	separator = '\n******\n'
 	processInfo = getProcessByPID(pid)
 	if processInfo != -1:
