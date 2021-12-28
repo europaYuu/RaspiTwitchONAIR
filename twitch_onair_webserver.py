@@ -591,11 +591,39 @@ def checkUpdate():
 def Update():
     return render_template('doupdate.html', message="Updating...")
 
-@app.route('/doUpdate', methods=['GET', 'POST'])
+@app.route('/doupdate', methods=['GET', 'POST'])
 def doUpdate():
-    os.system('sudo python3 doUpdate.py')
-    os.system('sudo shutdown -r now')
-    return render_template('../', message="Updating...")
+    if update.CheckUpdateNeeded():
+        os.system('sudo python3 doUpdate.py')
+        os.system('sudo shutdown -r now')
+
+    tryLoadConfig()
+
+    try:
+        live_color_hex = rgb_to_hex( (live_color[0]),(live_color[1]),(live_color[2]) )
+    except:
+            live_color_hex = "#ff0000"
+
+    try:
+        off_color_hex = rgb_to_hex( (off_color[0]),(off_color[1]),(off_color[2]) )
+    except:
+        off_color_hex = "#000000"
+
+    return render_template('index.html',
+        user_login_value=user_login,
+        client_id_value=client_id,
+        client_secret_value=placeholder_secret,
+        token_stale_age_value=token_stale_age,
+        update_interval_value=update_interval,
+        num_pixels_value=num_pixels,
+        live_color_picker_value=live_color_hex,
+        off_color_picker_value=off_color_hex,
+        neon_color=live_color_hex,
+        neon_color2=live_color_hex,
+        brightness_value=led_brightness,
+        num_rows_value=num_rows,
+        num_columns_value=num_columns
+        )
 
 if __name__ == '__main__':
     app.run(host='0.0.0.0', port=SERVER_PORT)
