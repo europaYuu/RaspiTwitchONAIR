@@ -8,6 +8,7 @@ import threading
 from threading import Thread
 
 import update
+import math
 
 print('\n///////////////////////////////////')
 print('Starting OLED Service...')
@@ -76,6 +77,8 @@ font = ImageFont.load_default()
 
 ###### Image Drawing Functions
 
+def clamp(n, smallest, largest): return max(smallest, min(n, largest))
+
 # Draw Text With Border
 def drawTextBorder(text, invert=False):
 	global image
@@ -108,6 +111,49 @@ def drawTextBorder(text, invert=False):
 		text,
 		font=font,
 		fill=textColor,
+	)
+
+# Draw Progress Bar
+def drawProgressBar(percent=0.5, text=' '):
+	global image
+	global font
+
+	# Create blank image for drawing.
+	# Make sure to create image with mode '1' for 1-bit color.
+	image = Image.new("1", (oled.width, oled.height))
+
+	# Get drawing object to draw on image.
+	draw = ImageDraw.Draw(image)
+
+	# Draw a white background
+	draw.rectangle((0, 0, oled.width, oled.height), outline=255, fill=255)
+
+	# Draw a smaller inner rectangle
+	draw.rectangle(
+		(BORDER, BORDER, oled.width - BORDER - 1, oled.height - BORDER - 1),
+		outline=0,
+		fill=0,
+	)
+
+	startX = BORDER + 1
+	endX = (oled.width - BORDER - 2)
+	x = int(
+		( float( endX - startX ) * clamp(percent,0.0,1.0)  ) + float( startX )
+		)
+	# Draw the progress bar
+	draw.rectangle(
+		(startX, BORDER + 16, x, oled.height - BORDER - 2),
+		outline=255,
+		fill=255,
+	)
+
+	# Draw the % Text
+	(font_width, font_height) = font.getsize(text)
+	draw.text(
+		(oled.width // 2 - font_width // 2, oled.height // 2 - font_height // 2 - 8),
+		text,
+		font=font,
+		fill=255,
 	)
 
 # Clear OLED
@@ -166,8 +212,8 @@ def fancyFlash(text, loops=4):
 clearOLED()
 ohayuu = ('Ohayuu! v.' + (update.getVersion('VERSION')))
 fancyFlash( ohayuu )
-fancyFlash('Press -> For IP.')
-time.sleep(2)
+#fancyFlash('Press -> For IP.')
+#time.sleep(2)
 clearOLED()
 
 ###### Tutorial: https://rpyc.readthedocs.io/en/latest/tutorial/tut3.html
@@ -212,6 +258,10 @@ class OledService(rpyc.Service):
 
 	def exposed_drawTextBorder(self, text, invert=False):
 		drawTextBorder(text, invert=invert)
+		showImage()
+
+	def exposed_drawProgressBar(self, percent, text):
+		drawProgressBar(percent, text)
 		showImage()
 
 if __name__ == "__main__":

@@ -1,5 +1,30 @@
 import os
 
+######## Connect to OLED Service
+import time
+import rpyc
+
+def drawProgressBar(percent, text):
+    try:
+        c = rpyc.connect("localhost", 18861)
+        c.root.drawProgressBar(percent, text)
+    except:
+        pass
+
+def drawTextBorder(text):
+    try:
+        c = rpyc.connect("localhost", 18861)
+        c.root.drawTextBorder(text)
+    except:
+        pass
+
+def turnOffOLED():
+    try:
+        c = rpyc.connect("localhost", 18861)
+        c.root.clear()
+    except:
+        pass
+
 def getVersion(filename):
 	with open(filename) as fp:
 		line = fp.readline()
@@ -60,24 +85,32 @@ path = os.getcwd()
 
 def Update():
 	global path
+
+	os.system('sudo systemctl stop powerButton.service')
+	os.system('sudo systemctl stop functionButton.service')
+
+	drawProgressBar(0.0, 'update started')
 	print('\n/////////////////////////////////')
 	print('Updating Twitch ON AIR Services...')
 	print('/////////////////////////////////')
 	print(' ')
 	print('Current Path: ' + path)
 
+	drawProgressBar(0.02, 'apt-get update')
 	print('\n/////////////////////////////////')
 	print('Performing apt-get update')
 	print('/////////////////////////////////')
 	print(' ')
 	os.system('sudo apt-get update')
 
+	drawProgressBar(0.1, 'apt-get upgrade')
 	print('\n/////////////////////////////////')
 	print('Performing apt-get upgrade')
 	print('/////////////////////////////////')
 	print(' ')
 	os.system('sudo apt-get upgrade')
 
+	drawProgressBar(0.2, 'cloning from git')
 	print('\n/////////////////////////////////')
 	print('Cloning Files From Git...')
 	print('/////////////////////////////////')
@@ -90,20 +123,33 @@ def Update():
 		pass
 
 	os.system('git clone https://github.com/europaYuu/RaspiTwitchONAIR.git')
+	drawProgressBar(0.4, 'file permissions')
 	os.system('sudo chmod -R 777 ' + path + '/RaspiTwitchONAIR')
+	drawProgressBar(0.45, 'setting file perms')
 	os.system('rm -rf ' + path + '/RaspiTwitchONAIR/.git/')
 	os.system('rm -rf ' + path + '/RaspiTwitchONAIR/.gitignore')
+	drawProgressBar(0.5, 'cleaning up')
 	print('\n/////////////////////////////////')
 	print('Moving Files To /home/pi...')
 	print('/////////////////////////////////')
 	print(' ')
+	drawProgressBar(0.7, 'moving files')
 	os.system('mv -v ' + path + '/RaspiTwitchONAIR/* ' + path)
 	os.system('rm -rf ' + path + '/RaspiTwitchONAIR/')
 
+	drawProgressBar(0.9, 'install services')
+	print('\n/////////////////////////////////')
+	print('Installing Services...')
+	print('/////////////////////////////////')
 	os.system('sudo python3 /home/pi/twitch_install_services.py')
+	drawProgressBar(1.0, 'update complete')
+	time.sleep(3.0)
 
 def RebootAfterUpdate():
 	global path
+	drawTextBorder( 'Rebooting...' )
+	time.sleep(1.5)
+	turnOffOLED()
 	print('\n/////////////////////////////////')
 	print('Rebooting...')
 	print('/////////////////////////////////')
