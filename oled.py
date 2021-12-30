@@ -151,13 +151,22 @@ def showVersion():
 	drawTextBorder( 'Version:' + update.getVersion('VERSION') )
 	showImage()
 
+def fancyFlash(text, loops=4):
+	x = 0
+	while x < loops:
+		drawTextBorder( text, invert = True )
+		showImage()
+		time.sleep(0.1)
+		drawTextBorder( text, invert = False )
+		showImage()
+		time.sleep(0.1)
+		x += 1
+
 ###### Startup Sequence
 clearOLED()
-drawTextBorder('Ohayuu! v.' + (update.getVersion('VERSION')) )
-showImage()
-time.sleep(2)
-drawTextBorder('Press -> For IP.')
-showImage()
+ohayuu = ('Ohayuu! v.' + (update.getVersion('VERSION')))
+fancyFlash( ohayuu )
+fancyFlash('Press -> For IP.')
 time.sleep(2)
 clearOLED()
 
