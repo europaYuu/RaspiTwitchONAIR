@@ -7,6 +7,8 @@ import time
 import threading
 from threading import Thread
 
+import update
+
 print('\n///////////////////////////////////')
 print('Starting OLED Service...')
 print('///////////////////////////////////')
@@ -14,23 +16,33 @@ print(' ')
 
 ###### Hostname Stuff
 import socket
-testIP = "8.8.8.8"
-s = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
-s.connect((testIP, 0))
-ipaddr = s.getsockname()[0]
-host = socket.gethostname()
-print ("IP:", ipaddr, " Host:", host)
+
+host = "host_not_set" #default invalid host
+ipaddr = "0.0.0.0" #default invalid IP
+
+def UpdateHost():
+	print('Updating Hostname...')
+	global host
+	global ipaddr
+	testIP = "8.8.8.8"
+	s = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+	s.connect((testIP, 0))
+	ipaddr = s.getsockname()[0]
+	host = socket.gethostname()
+	print ("UpdateHost():", ipaddr, " Host:", host)
+
+UpdateHost()
 
 # Webserver (Synchronize this with twitch_onair_webserver.py)
 SERVER_PORT = "8000"
-host_url = ipaddr + ':' + SERVER_PORT
-print ('host_url: ' + host_url)
+
+print ('host_url: ' + ipaddr + ':' + SERVER_PORT )
 
 ###### Remote Procedure call
 import rpyc
 
 ###### Draw Image, ssd1306 OLED Drivers
-from PIL import Image, ImageDraw, ImageFont
+from PIL import Image, ImageDraw, ImageFont, ImageOps
 import adafruit_ssd1306
 import digitalio
 
@@ -65,9 +77,11 @@ font = ImageFont.load_default()
 ###### Image Drawing Functions
 
 # Draw Text With Border
-def drawTextBorder(text):
+def drawTextBorder(text, invert=False):
 	global image
 	global font
+
+	textColor = 0
 
 	# Create blank image for drawing.
 	# Make sure to create image with mode '1' for 1-bit color.
@@ -80,18 +94,20 @@ def drawTextBorder(text):
 	draw.rectangle((0, 0, oled.width, oled.height), outline=255, fill=255)
 
 	# Draw a smaller inner rectangle
-	draw.rectangle(
-		(BORDER, BORDER, oled.width - BORDER - 1, oled.height - BORDER - 1),
-		outline=0,
-		fill=0,
-	)
+	if not invert:
+		draw.rectangle(
+			(BORDER, BORDER, oled.width - BORDER - 1, oled.height - BORDER - 1),
+			outline=0,
+			fill=0,
+		)
+		textColor = 255
 
 	(font_width, font_height) = font.getsize(text)
 	draw.text(
 		(oled.width // 2 - font_width // 2, oled.height // 2 - font_height // 2),
 		text,
 		font=font,
-		fill=255,
+		fill=textColor,
 	)
 
 # Clear OLED
@@ -109,8 +125,9 @@ def showImage():
 	oled.show()
 
 # Cycle between IP / Hostname Display
-def showHostURL(displayTime=3.0, loops=5):
+def showHostURLLoop(displayTime=3.0, loops=5):
 	i = 0
+	UpdateHost()
 	while i < loops:
 		drawTextBorder(host + ':' + SERVER_PORT)
 		showImage()
@@ -120,9 +137,23 @@ def showHostURL(displayTime=3.0, loops=5):
 		time.sleep(displayTime)
 		i += 1
 
+def showHostURL():
+	UpdateHost()
+	drawTextBorder(host + ':' + SERVER_PORT)
+	showImage()
+
+def showHostIP():
+	UpdateHost()
+	drawTextBorder(ipaddr + ':' + SERVER_PORT)
+	showImage()
+
+def showVersion():
+	drawTextBorder( 'Version:' + update.getVersion('VERSION') )
+	showImage()
+
 ###### Startup Sequence
 clearOLED()
-drawTextBorder('Ohayuu!')
+drawTextBorder('Ohayuu! v.' + (update.getVersion('VERSION')) )
 showImage()
 time.sleep(2)
 drawTextBorder('Press -> For IP.')
@@ -158,9 +189,21 @@ class OledService(rpyc.Service):
 		if clearAfter:
 			clearOLED()
 
-	def exposed_ExShowHOstURL(self, displayTime=3.0, loops=3):
-		showHostURL(displayTime, loops)
+	def exposed_clear(self):
 		clearOLED()
+
+	def exposed_showHostIP(self):
+		showHostIP()
+
+	def exposed_showHostURL(self):
+		showHostURL()
+
+	def exposed_showVersion(self):
+		showVersion()
+
+	def exposed_drawTextBorder(self, text, invert=False):
+		drawTextBorder(text, invert=invert)
+		showImage()
 
 if __name__ == "__main__":
 	from rpyc.utils.server import ThreadedServer
