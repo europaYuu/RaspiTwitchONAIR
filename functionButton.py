@@ -78,9 +78,6 @@ def tryFunctionButton():
             c.root.drawTextBorder( 'Streamer', invert=True )
             time.sleep(0.5)
             c.root.drawTextBorder( getStreamer() )
-        #elif OLED_mode == 3:
-            #c.root.drawTextBorder( 'Statistics', invert=True )
-            #time.sleep(0.5)
         elif OLED_mode == 3:
             c.root.showVersion()
         else:
@@ -135,12 +132,14 @@ class Main(Thread):
                             print('Function button Released at: ' + str(datetime.now()) )
 
                         pressed = False
-
                     time.sleep (0.1)
+                time.sleep (0.1)
 
             except KeyboardInterrupt:
                 GPIO.cleanup()
                 print('\npowerButton.py interrupted by user input')
+
+            time.sleep (0.5)
 
 class Async(Thread):
     def __init__(self):
@@ -160,45 +159,9 @@ class Async(Thread):
                         oled_on = False
             except:
                 pass
-            time.sleep(0.5)
-
-class StatsDraw(Thread):
-    def __init__(self):
-        Thread.__init__(self)
-        self.daemon = True
-        self.start()
-    def run(self):
-        global oled_on
-        global use
-        while True:
-            try:
-                time_delta = int( ( datetime.now() - last_press_time ).seconds )
-                if oled_on and OLED_mode == 3 and time_delta > 0.5:
-                    c.root.drawTextBorder( 'CPU: ' + use )
-                else:
-                    pass
-            except:
-                pass
-            time.sleep(0.66)
-
-class StatsThread(Thread):
-    def __init__(self):
-        Thread.__init__(self)
-        self.daemon = True
-        self.start()
-    def run(self):
-        global use
-        while True:
-            try:
-                if OLED_mode == 3:
-                    use = getCPUuse()
-            except:
-                pass
-            time.sleep (0.33)
+            time.sleep(1.0)
 
 Main()
 Async()
-#StatsDraw()
-#StatsThread()
 while True:
-    pass
+    time.sleep(0.5)

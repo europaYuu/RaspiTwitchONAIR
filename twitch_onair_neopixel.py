@@ -1074,4 +1074,4 @@ class AsyncLED(Thread):
 Main()
 AsyncLED()
 while True:
-	pass
+	time.sleep(0.5)
