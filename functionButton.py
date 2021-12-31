@@ -24,6 +24,7 @@ try:
 except:
     pass
 
+######## Other libraries
 import json
 from datetime import datetime
 
@@ -59,14 +60,21 @@ def tryExShowHostURL():
     except:
         pass
 
+# Statistics
 def getCPUuse():
-    return str(os.popen("top -n1 | awk '/Cpu\(s\):/ {print $2}'").readline())
+    rawstring = str(os.popen("top -n1 | awk '/Cpu\(s\):/ {print $2}'").readline())
+    return rawstring.strip()
+    return psutil.cpu_percent()
+
+def getRAMuse():
+    total_memory, used_memory, free_memory = map(
+    int, os.popen('free -t -m').readlines()[-1].split()[1:])
+    return str( round((used_memory/total_memory) * 100,2) )
 
 def tryFunctionButton():
     global c
     global oled_service_connected
     global OLED_mode
-    global cpu
     try:
         c = rpyc.connect("localhost", 18861)
         oled_service_connected = True
@@ -78,6 +86,10 @@ def tryFunctionButton():
             c.root.drawTextBorder( 'Streamer', invert=True )
             time.sleep(0.5)
             c.root.drawTextBorder( getStreamer() )
+        #elif OLED_mode == 3:
+            #c.root.drawTextBorder( 'Statistics', invert=True )
+            #time.sleep(0.5)
+            #pass
         elif OLED_mode == 3:
             c.root.showVersion()
         else:
@@ -97,9 +109,10 @@ def turnOffOLED():
         pass
 
 oled_on = False
-oled_timeout = 10.0
+oled_timeout = 30.0
 OLED_mode = 0
 use = "00.0"
+ram = "00.00"
 last_press_time = datetime.now()
 
 class Main(Thread):
@@ -155,13 +168,52 @@ class Async(Thread):
                     time_delta = int( ( datetime.now() - last_press_time ).seconds )
                     print('OLED timeout in: ' + str( oled_timeout - time_delta) )
                     if time_delta >= oled_timeout :
-                        turnOffOLED()
                         oled_on = False
+                        turnOffOLED()
+            except:
+                pass
+            time.sleep(1.0)
+
+class DrawStats(Thread):
+    def __init__(self):
+        Thread.__init__(self)
+        self.daemon = True
+        self.start()
+    def run(self):
+        global oled_on
+        global OLED_mode
+        global use
+        global ram
+        while True:
+            try:
+                if oled_on and OLED_mode == 3:
+                    c.root.drawTextBorder( ' CPU:' + use.zfill(4)+ ' MEM:' + ram.zfill(4) )
+            except:
+                pass
+            time.sleep(1.0)
+
+class GetStats(Thread):
+    def __init__(self):
+        Thread.__init__(self)
+        self.daemon = True
+        self.start()
+    def run(self):
+        global oled_on
+        global OLED_mode
+        global use
+        global ram
+        while True:
+            try:
+                if oled_on and OLED_mode == 3:
+                    use = getCPUuse()
+                    ram = getRAMuse()
             except:
                 pass
             time.sleep(1.0)
 
 Main()
 Async()
+#GetStats() #Disabled because ironically, it uses too much CPU
+#DrawStats() #Disabled because ironically, it uses too much CPU
 while True:
     time.sleep(0.5)
