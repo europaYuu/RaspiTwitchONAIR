@@ -59,7 +59,18 @@ BORDER = 1
 
 # Use for I2C.
 i2c = board.I2C()
-oled = adafruit_ssd1306.SSD1306_I2C(WIDTH, HEIGHT, i2c, addr=0x3C, reset=oled_reset)
+
+def scani2c():
+	print('Scanning for OLED i2C address...')
+	global i2c
+	i2c_addresses = [ hex(device_address) for device_address in i2c.scan() ]
+	print('I2C address found: ' + str(i2c_addresses[0]) )
+	return i2c_addresses[0]
+
+i2c_addr = scani2c()
+
+# oled = adafruit_ssd1306.SSD1306_I2C(WIDTH, HEIGHT, i2c, addr=0x3C, reset=oled_reset)
+oled = adafruit_ssd1306.SSD1306_I2C(WIDTH, HEIGHT, i2c, addr=eval(i2c_addr), reset=oled_reset)
 
 # Initial State Machine
 input_block = False
