@@ -43,12 +43,15 @@ input_block = False
 pressed = False
 
 def getStreamer():
-    with open('config/twitch_onair_config.json') as json_config_file:
-        configData = json.load(json_config_file)
-        try:
-            return configData['user']
-        except:
-            'Config Not Set'
+    try:
+        with open('config/twitch_onair_config.json') as json_config_file:
+            configData = json.load(json_config_file)
+            try:
+                return configData['user']
+            except:
+                return 'Config Not Set'
+    except:
+        return 'Config Not Set'
 
 def tryExShowHostURL():
     global c

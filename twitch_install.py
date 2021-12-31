@@ -22,6 +22,7 @@ os.system('sudo pip3 install flask')
 os.system('sudo pip3 install adafruit-circuitpython-ssd1306')
 os.system('sudo apt-get install i2c-tools')
 os.system('sudo pip3 install rpyc')
+os.system('sudo pip3 install psutil')
 
 print('\n/////////////////////////////////')
 print('Cloning Files From Git...')
