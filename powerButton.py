@@ -128,7 +128,7 @@ def restart():
 	print('Restarting...')
 	tryOLedMessage('Restarting...')
 	time.sleep(1.0)
-	GPIO.cleanup()
+	#GPIO.cleanup()
 	os.system('sudo shutdown -r now')
 def shutdown():
 	global input_block
@@ -149,6 +149,7 @@ try:
 			if not pressed:
 				press_time = time.time()
 				print('Power button pressed')
+				tryOLedMessage('Pressed', displayTime=0.5)
 			
 			pressed = True
 
@@ -160,6 +161,7 @@ try:
 
 			else:
 				print('Hold power button for ' + str( abs(remaining_time) ) + ' more seconds to shutdown')
+				tryOLedMessage('Hold ' + str(abs(remaining_time)) + 's to shutdown', displayTime=0.5)
 				#oledString = ( str( abs(remaining_time) ) + "s to OFF" )
 				#tryOLedMessage( oledString , 0.5 )
 
@@ -174,7 +176,7 @@ try:
 
 			pressed = False
 
-		time.sleep (0.2)
+		time.sleep (0.1)
 
 except KeyboardInterrupt:
 	GPIO.cleanup()
