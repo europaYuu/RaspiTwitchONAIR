@@ -4,7 +4,7 @@ A series of Raspberry Pi services for checking twitch stream status over the net
 Build guide / Manual coming soon.
 
 # Wiring Diagram:
-![wiring-diagram](https://user-images.githubusercontent.com/92567050/147701979-cc543aa8-460a-4540-a70d-cbe288f3aaaa.png)
+![wiring-diagram](https://user-images.githubusercontent.com/92567050/147868495-59f29a5d-bafe-4772-beba-49da43820614.png)
 
 # Materials:
 I've included (mostly) amazon links so it's easier to identify parts, but you don't need to buy some of the huge packs linked and a lot of the materials can be found cheaper off amazon, especially the glues.
