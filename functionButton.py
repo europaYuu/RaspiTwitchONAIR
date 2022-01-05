@@ -14,6 +14,7 @@ GPIO.setup(13, GPIO.IN, pull_up_down=GPIO.PUD_UP) # Pin 23 = Multifunction Butto
 import board
 import threading
 from threading import Thread
+import subprocess #for SSID
 
 ######## Connect to OLED Service
 import rpyc
@@ -63,6 +64,17 @@ def tryExShowHostURL():
     except:
         pass
 
+def getSSID():
+    try:
+        output = subprocess.check_output(['sudo', 'iwgetid'])
+        output = output.split()[1]
+        output = output.strip()
+        output = eval(output[6:])
+        print('SSID:' + output)
+        return output
+    except:
+        return 'error/not connected'
+
 # Statistics
 def getCPUuse():
     rawstring = str(os.popen("top -n1 | awk '/Cpu\(s\):/ {print $2}'").readline())
@@ -94,6 +106,10 @@ def tryFunctionButton():
             #time.sleep(0.5)
             #pass
         elif OLED_mode == 3:
+            c.root.drawTextBorder( 'WIFI SSID', invert=True )
+            time.sleep(0.5)
+            c.root.drawTextBorder( getSSID() )
+        elif OLED_mode == 4:
             c.root.showVersion()
         else:
             c.root.showHostURL()
