@@ -104,7 +104,7 @@ pixel_pin = board.D18
 ORDER = neopixel.GRB
 
 #max brightness to limit power consumption and heat - match with twitch_onair_neopixel.py
-MAX_HARDWARE_BRIGHTNESS = 0.33
+MAX_HARDWARE_BRIGHTNESS = 1.0
 
 ###### Defaults
 user_login = "europayuu"
