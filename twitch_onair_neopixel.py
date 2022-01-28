@@ -106,7 +106,7 @@ live_color = (255,255,255)
 off_color = (0,0,0)
 
 #max brightness to limit power consumption and heat - match with twitch_onair_webserver.py
-MAX_HARDWARE_BRIGHTNESS = 0.8
+MAX_HARDWARE_BRIGHTNESS = 0.7
 
 #default configurable brightness
 led_brightness = 0.3
