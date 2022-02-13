@@ -3,7 +3,7 @@ A series of Raspberry Pi services for checking twitch stream status over the net
 
 Build guide coming soon.
 
-Manual(https://docs.google.com/document/d/1a7vTt38EqEU-vdYam6Os5g6GV-UzTUFsQE1jwR7cjsA/edit?usp=sharing)
+[Manual](https://docs.google.com/document/d/1a7vTt38EqEU-vdYam6Os5g6GV-UzTUFsQE1jwR7cjsA/edit?usp=sharing)
 
 # Wiring Diagram:
 ![wiring-diagram](https://user-images.githubusercontent.com/92567050/147868495-59f29a5d-bafe-4772-beba-49da43820614.png)
