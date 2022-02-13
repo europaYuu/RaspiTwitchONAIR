@@ -1,7 +1,9 @@
 # RaspiTwitchONAIR
 A series of Raspberry Pi services for checking twitch stream status over the net and displaying the result via Neopixel / WS2812 LEDs. Has a web interface for configuration and supports a 128x32 I2C OLED for displaying Hostname / IP for the web interface and status updates.
 
-Build guide / Manual coming soon.
+Build guide coming soon.
+
+Manual(https://docs.google.com/document/d/1a7vTt38EqEU-vdYam6Os5g6GV-UzTUFsQE1jwR7cjsA/edit?usp=sharing)
 
 # Wiring Diagram:
 ![wiring-diagram](https://user-images.githubusercontent.com/92567050/147868495-59f29a5d-bafe-4772-beba-49da43820614.png)
