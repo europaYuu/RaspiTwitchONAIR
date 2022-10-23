@@ -134,6 +134,8 @@ def Update():
 	print('/////////////////////////////////')
 	print(' ')
 	drawProgressBar(0.7, 'moving files')
+	os.system('rm -rf ' + path + '/static/' ) #remove old
+	os.system('rm -rf ' + path + '/template/' ) #remove old
 	os.system('mv -v -f ' + path + '/RaspiTwitchONAIR/* ' + path)
 	os.system('rm -rf ' + path + '/RaspiTwitchONAIR/')
 
