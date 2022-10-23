@@ -877,7 +877,7 @@ def checkConfigUpdate():
 # Returns 1 if user_login is online, 0 if user_login is offline, and -1 if there was an authentication error
 def tw_isLive(user_login):
 	global first_loop
-	updateTime()
+	#updateTime()
 	token_file_exists = tokenFileExist()
 	if token_file_exists:
 
@@ -1000,6 +1000,7 @@ def yt_isLive():
 def isLive(user_login):
 	global enable_twitch
 	global enable_youtube
+	updateTime()
 	printLog('//// isLive() Youtube: ' + str(enable_youtube) + ' Twitch: ' + str(enable_twitch) + ' ////')
 	global tw_live_status
 	global yt_live_status
