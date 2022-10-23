@@ -137,6 +137,12 @@ def Update():
 	os.system('mv -v ' + path + '/RaspiTwitchONAIR/* ' + path)
 	os.system('rm -rf ' + path + '/RaspiTwitchONAIR/')
 
+	drawProgressBar(0.8, 'updating dependencies')
+	print('\n/////////////////////////////////')
+	print('Updating Dependencies...')
+	print('/////////////////////////////////')
+	os.system('sudo python3 /home/pi/twitch_update_dependencies.py')
+
 	drawProgressBar(0.9, 'install services')
 	print('\n/////////////////////////////////')
 	print('Installing Services...')

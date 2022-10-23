@@ -17,6 +17,7 @@ import os
 import requests #For making cURL requests
 import datetime
 import pandas as pd #Simple datetime formatting for checking if tokens are stale
+from bs4 import BeautifulSoup #For parsing HTML (youtube)
 import json
 import time
 
@@ -99,6 +100,13 @@ update_interval = 30
 #streamer to watch
 user_login = 'europayuu'
 
+######## YouTube Channel ID, NOT name
+# Test IDs
+# Europa Yuu: UC5Ejf_RIWMVDAjA4B-GV5Zg
+# Amelia Watson: UCyl1z3jo3XHR1riLFKG5UAg (She happened to be online while I was working on this code. Thank you Amelia!)
+# Lofi Girl: UCSJ4gkVC6NrvII8umztf0Ow
+yt_channel_id = 'UC5Ejf_RIWMVDAjA4B-GV5Zg'
+
 #default light color when live
 live_color = (255,255,255)
 
@@ -116,6 +124,10 @@ num_rows = 3
 num_columns = 8
 
 TARGET_FRAMERATE = 20 # For effects that take a time input
+
+enable_twitch = True
+
+enable_youtube = False
 
 # Debug Log. set to True if you want debug file output
 def tryMakeLogDir():
@@ -248,6 +260,9 @@ def tryLoadConfig():
 	global led_brightness
 	global pixels
 	global MAX_HARDWARE_BRIGHTNESS
+	global yt_channel_id
+	global enable_twitch
+	global enable_youtube
 
 	json_read_error = 'Error reading key value. Default key value used for '
 
@@ -321,6 +336,21 @@ def tryLoadConfig():
 					num_columns = int( configData['num_columns'] )
 				except:
 					printLog(json_read_error + 'num_columns')
+
+				try:
+					yt_channel_id = configData['yt_channel_id']
+				except:
+					printLog(json_read_error + 'yt_channel_id')
+
+				try:
+					enable_twitch = configData['enable_twitch']
+				except:
+					printLog(json_read_error + 'enable_twitch')
+
+				try:
+					enable_youtube = configData['enable_youtube']
+				except:
+					printLog(json_read_error + 'enable_youtube')
 
 			led_brightness= clamp( (led_brightness * MAX_HARDWARE_BRIGHTNESS), 0, MAX_HARDWARE_BRIGHTNESS )
 			#printLog( 'Brightness set to ' + str(led_brightness) )
@@ -833,7 +863,7 @@ def checkConfigUpdate():
 # Checks if user_login is live using Get Streams example on twitch API docs
 # More info: https://dev.twitch.tv/docs/api/reference#get-streams 
 # Returns 1 if user_login is online, 0 if user_login is offline, and -1 if there was an authentication error
-def isLive(user_login):
+def tw_isLive(user_login):
 	global first_loop
 	updateTime()
 	token_file_exists = tokenFileExist()
@@ -898,6 +928,48 @@ def isLive(user_login):
 	else:
 		return (-2)
 
+# Returns 1 if user_login is online, 0 if user_login is offline, and -1 if there was an error
+def yt_isLive():
+	global yt_channel_id
+	printLog("Checking Youtube Channel Live Status...")
+	yt_url = 'https://www.youtube.com/channel/' + yt_channel_id + '/live'
+	yt_response_text = requests.get(yt_url).text
+	yt_soup = BeautifulSoup(yt_response_text, 'html.parser')
+	try:
+		yt_soup = str( yt_soup.find("link", {"rel": "canonical"}) ) #Parse the result of our HTML link for elements exclusive to streams that are live
+		if 'watch' in yt_soup:
+			# Online
+			yt_live = 1
+		else:
+			# Offline
+			yt_live = 0
+	except:
+		# Invalid Channel ID
+		yt_live = -1
+
+	return yt_live
+
+def isLive(user_login):
+	global enable_twitch
+	global enable_youtube
+	printLog('//// isLive() Youtube: ' + str(enable_youtube) + ' Twitch: ' + str(enable_twitch) + ' ////')
+	tw_live_status = 0
+	yt_live_status = 0
+
+	if enable_twitch:
+		tw_live_status = tw_isLive(user_login)
+	if enable_youtube:
+		yt_live_status = yt_isLive()
+
+	if max(tw_live_status, yt_live_status) > 0:
+		return max(tw_live_status, yt_live_status)
+
+	if min(tw_live_status, yt_live_status) < 0:
+		return min(tw_live_status, yt_live_status)
+
+	else:
+		return 0;
+
 ########
 ######## State Machine
 ########
@@ -909,9 +981,9 @@ previous_live = 0
 ######## Debug Functions
 ########
 
-def debugLive(user_login):
+def debugLive(user_login): #Only works for Twitch
 	global live
-	live = isLive(user_login)
+	live = tw_isLive(user_login)
 	if live == 1:
 		printLog(user_login + ' is live')
 	elif live == 0:
@@ -992,6 +1064,7 @@ class Main(Thread):
 		global live
 		global user_login
 		global update_interval
+		global yt_channel_id
 		global ASYNC_LED_STATE
 
 		while True:
@@ -1007,7 +1080,7 @@ class Main(Thread):
 					time.sleep(0.5)
 
 				if live >= 1:
-					printLog(user_login + ' is live')
+					printLog('Stream is live')
 					if previous_live != live: #Did our live status change from the last check?
 						printLog('Live status has changed, calling pixelLiveChanged()')
 						tryOLedMessage('Stream Online')
@@ -1015,7 +1088,7 @@ class Main(Thread):
 					else:
 						pixelFlood(live_color)
 				elif live == 0:
-					printLog(user_login + ' is offline')
+					printLog('Stream is offline')
 					if previous_live != live: #Did our live status change from the last check?
 						printLog('Live Status changed, calling PixelOffChanged()')
 						tryOLedMessage('Stream Offline')

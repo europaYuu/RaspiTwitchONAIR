@@ -75,6 +75,14 @@ def rgb2hsv(r,g,b):
     rgb = ( (rf / 255.0), (gf / 255.0), (bf / 255.0) )
     return colorsys.rgb_to_hsv( rgb[0], rgb[1], rgb[2] )
 
+#convert "True/False to "checked" and ""
+
+def boolToCheckbox(source):
+    if source:
+        return "checked"
+    else:
+        return ""
+
 import socket
 testIP = "8.8.8.8"
 s = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
@@ -120,6 +128,9 @@ placeholder_secret = "*****" #not stored
 num_rows = "3"
 num_columns = "8"
 TARGET_FRAMERATE = 20 # For effects that take a time input
+yt_channel_id = "UC5Ejf_RIWMVDAjA4B-GV5Zg"
+enable_twitch = True
+enable_youtube = False
 
 # Debug Log. set to True if you want debug file output
 def tryMakeLogDir():
@@ -172,6 +183,9 @@ def setDefaults():
     global led_brightness
     global num_rows
     global num_columns
+    global yt_channel_id
+    global enable_twitch
+    global enable_youtube
 
     user_login = "europayuu"
     client_id = "<CLIENT_ID>"
@@ -182,6 +196,9 @@ def setDefaults():
     live_color = "(255,0,0)"
     off_color = "(0,0,0)"
     led_brightness = "0.3"
+    yt_channel_id = "UC5Ejf_RIWMVDAjA4B-GV5Zg"
+    enable_twitch = True
+    enable_youtube = False
 
 ######## DEBUG LOG ########
 if ENABLE_DEBUG_LOG:
@@ -227,6 +244,8 @@ def tryLoadConfig():
     global led_brightness
     global num_rows
     global num_columns
+    global enable_twitch
+    global enable_youtube
 
     json_read_error = 'Webserver: Error reading key value. Default key value used for '
 
@@ -301,6 +320,21 @@ def tryLoadConfig():
                 except:
                     printLog(json_read_error + 'num_columns')
 
+                try:
+                    yt_channel_id = configData['yt_channel_id']
+                except:
+                    printLog(json_read_error + 'yt_channel_id')
+
+                try:
+                    enable_twitch = configData['enable_twitch']
+                except:
+                    printLog(json_read_error + 'enable_twitch')
+
+                try:
+                    enable_youtube = configData['enable_youtube']
+                except:
+                    printLog(json_read_error + 'enable_youtube')
+
                 last_config_file_time = timestamp
 
         else:
@@ -320,6 +354,7 @@ def writeConfig():
     data = {
         'user': user_login,
         'client_id': client_id,
+        'yt_channel_id' : yt_channel_id,
         'client_secret': client_secret,
         'token_stale_age': token_stale_age,
         'update_interval': update_interval,
@@ -328,7 +363,9 @@ def writeConfig():
         'off_color': off_color,
         'led_brightness': led_brightness,
         'num_rows': num_rows,
-        'num_columns': num_columns
+        'num_columns': num_columns,
+        'enable_youtube': enable_youtube,
+        'enable_twitch': enable_twitch
     }
     with open('config/twitch_onair_config.json', 'w') as outfile:
         json.dump(data, outfile)
@@ -537,10 +574,23 @@ def index():
     global led_brightness
     global num_rows
     global num_columns
+    global yt_channel_id
+    global enable_youtube
+    global enable_twitch
 
     if request.method == 'POST':
         user_login = request.form['user_login'][:30]
         client_id = request.form['client_id'][:60]
+        yt_channel_id = request.form['yt_channel_id'][:80]
+        if request.form.get('enable_youtube'):
+            enable_youtube = True
+        else:
+            enable_youtube = False
+
+        if request.form.get('enable_twitch'):
+            enable_twitch = True
+        else:
+            enable_twitch = False
         
         # Only update client_secret if it's not the server-obfuscated value
         POST_secret = request.form['client_secret'][:60]
@@ -603,7 +653,10 @@ def index():
             brightness_value=led_brightness,
             num_rows_value=num_rows,
             num_columns_value=num_columns,
-            version=version_local
+            version=version_local,
+            yt_channel_id_value=yt_channel_id,
+            enable_youtube_value=boolToCheckbox(enable_youtube),
+            enable_twitch_value=boolToCheckbox(enable_twitch)
             )
 
     else:
@@ -634,7 +687,10 @@ def index():
             brightness_value=led_brightness,
             num_rows_value=num_rows,
             num_columns_value=num_columns,
-            version=version_local
+            version=version_local,
+            yt_channel_id_value=yt_channel_id,
+            enable_youtube_value=boolToCheckbox(enable_youtube),
+            enable_twitch_value=boolToCheckbox(enable_twitch)
             )
 
 @app.route('/reset', methods=['GET', 'POST'])
@@ -699,7 +755,10 @@ def killLED():
         brightness_value=led_brightness,
         num_rows_value=num_rows,
         num_columns_value=num_columns,
-        version=version_local
+        version=version_local,
+        yt_channel_id_value=yt_channel_id,
+        enable_youtube_value=boolToCheckbox(enable_youtube),
+        enable_twitch_value=boolToCheckbox(enable_twitch)
         )
 
 @app.route('/deltoken', methods=['GET', 'POST'])
@@ -760,7 +819,10 @@ def doUpdate():
         brightness_value=led_brightness,
         num_rows_value=num_rows,
         num_columns_value=num_columns,
-        version=version_local
+        version=version_local,
+        yt_channel_id_value=yt_channel_id,
+        enable_youtube_value=boolToCheckbox(enable_youtube),
+        enable_twitch_value=boolToCheckbox(enable_twitch)
         )
 
 if __name__ == '__main__':

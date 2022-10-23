@@ -54,6 +54,17 @@ def getStreamer():
     except:
         return 'Config Not Set'
 
+def getYoutuber():
+    try:
+        with open('config/twitch_onair_config.json') as json_config_file:
+            configData = json.load(json_config_file)
+            try:
+                return configData['yt_channel_id']
+            except:
+                return 'Config Not Set'
+    except:
+        return 'Config Not Set'
+
 def tryExShowHostURL():
     global c
     global oled_service_connected
@@ -86,6 +97,40 @@ def getRAMuse():
     int, os.popen('free -t -m').readlines()[-1].split()[1:])
     return str( round((used_memory/total_memory) * 100,2) )
 
+def boolToText(source):
+    if source:
+        return "[ON]"
+    else:
+        return "[OFF]"
+
+def getTwitchEnable():
+    try:
+        with open('config/twitch_onair_config.json') as json_config_file:
+            configData = json.load(json_config_file)
+            try:
+                if configData['enable_twitch']:
+                    return boolToText( configData['enable_twitch'] )
+                else:
+                    return boolToText(False)
+            except:
+                return boolToText(False)
+    except:
+        return boolToText(False)
+
+def getYoutubeEnable():
+    try:
+        with open('config/twitch_onair_config.json') as json_config_file:
+            configData = json.load(json_config_file)
+            try:
+                if configData['enable_youtube']:
+                    return boolToText(True)
+                else:
+                    return boolToText(False)
+            except:
+                return boolToText(False)
+    except:
+        return boolToText(False)
+
 def tryFunctionButton():
     global c
     global oled_service_connected
@@ -98,18 +143,20 @@ def tryFunctionButton():
         elif OLED_mode == 1:
             c.root.showHostIP()
         elif OLED_mode == 2:
-            c.root.drawTextBorder( 'Streamer', invert=True )
+            c.root.drawTextBorder( ('Twitch' + getTwitchEnable()), invert=True )
             time.sleep(0.5)
             c.root.drawTextBorder( getStreamer() )
-        #elif OLED_mode == 3:
-            #c.root.drawTextBorder( 'Statistics', invert=True )
-            #time.sleep(0.5)
-            #pass
         elif OLED_mode == 3:
+            c.root.drawTextBorder( ('Youtube' + getYoutubeEnable()), invert=True )
+            time.sleep(0.5)
+            c.root.drawTextBorder( getYoutuber() )
+            time.sleep(0.5)
+            pass
+        elif OLED_mode == 4:
             c.root.drawTextBorder( 'WIFI SSID', invert=True )
             time.sleep(0.5)
             c.root.drawTextBorder( getSSID() )
-        elif OLED_mode == 4:
+        elif OLED_mode == 5:
             c.root.showVersion()
         else:
             c.root.showHostURL()

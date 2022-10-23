@@ -39,24 +39,14 @@
 <h4>Basic:</h4>
 
 <div class="fieldHolder">
-   <label for="user_login">Watch User:</label>
+   <label for="user_login">Twitch User</label>
    <span><input type="text" id="user_login" name="user_login" value ="{{user_login_value}}"></span>
 </div>
-<!--
-<div class="fieldHolder">
-   <label for="live_color_r">Live Color R</label>
-   <span><input type="number" id="live_color_r" name="live_color_r" value ="{{live_color_r_value}}"></span>
-</div>
 
 <div class="fieldHolder">
-   <label for="live_color_g">Live Color G</label>
-   <span><input type="number" id="live_color_g" name="live_color_g" value ="{{live_color_g_value}}"></span>
+   <label for="yt_channel_id">Youtube Channel ID</label>
+   <span><input type="text" id="yt_channel_id" name="yt_channel_id" value ="{{yt_channel_id_value}}"></span>
 </div>
-
-<div class="fieldHolder">
-   <label for="live_color_b">Live Color B</label>
-   <span><input type="number" id="live_color_b" name="live_color_b" value ="{{live_color_b_value}}"></span>
-</div>-->
 
 <div class="fieldHolder">
    <label for="live_color_picker">Live Color</label>
@@ -73,25 +63,55 @@
    <span><input type="range" min="0.025" max="1.0" step="0.025" id="led_brightness" name="led_brightness" value ="{{brightness_value}}"></span>
 </div>
 
-<h4>Advanced:</h4>
+<div class="checkboxesHolder">
+   <div class="checkboxHolder">
+      <div class="checkboxInternal">
+         <img src="images/twitch.png" class="platformIcon">
+      <label for="enable_twitch" class="checkboxHolderLabel">Twitch</label>
+         <label class="toggler-wrapper style-1">
+            <input type="checkbox" id="enable_twitch" name="enable_twitch" {{enable_twitch_value}}>
+               <div class="toggler-slider">
+                  <div class="toggler-knob"></div>
+               </div>
+         </label>
+      </div>
+   </div>
+
+   <div class="checkboxHolder">
+      <div class="checkboxInternal youtube">
+         <img src="images/youtube.png" class="platformIcon">
+      <label for="enable_youtube" class="checkboxHolderLabel">Youtube</label>
+         <label class="toggler-wrapper style-1">
+            <input type="checkbox" id="enable_youtube" name="enable_youtube" {{enable_youtube_value}}>
+               <div class="toggler-slider">
+                  <div class="toggler-knob"></div>
+               </div>
+         </label>
+      </div>
+   </div>
+</div>
+
+<h4>Advanced (Twitch):</h4>
 
 <div class="fieldHolder">
-   <label for="client_id">Client ID:</label>
+   <label for="client_id">Client ID</label>
    <span><input type="text" id="client_id" name="client_id" value ="{{client_id_value}}"></span>
 </div>
 
 <div class="fieldHolder">
-   <label for="client_secret">Client Secret:</label>
+   <label for="client_secret">Client Secret</label>
    <span><input type="password" id="client_secret" name="client_secret" value ="{{client_secret_value}}"></span>
 </div>
 
 <div class="fieldHolder">
-   <label for="token_stale_age">Token Expiry Days:</label>
+   <label for="token_stale_age">Token Expiry Days</label>
    <span><input type="number" id="token_stale_age" name="token_stale_age" value ="{{token_stale_age_value}}"></span>
 </div>
 
+<h4>Advanced (Global):</h4>
+
 <div class="fieldHolder">
-   <label for="update_interval">Interval (Seconds):</label>
+   <label for="update_interval">Interval (Seconds)</label>
    <span><input type="number" id="update_interval" name="update_interval" value ="{{update_interval_value}}"></span>
 </div>
 
