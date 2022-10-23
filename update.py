@@ -110,6 +110,14 @@ def Update():
 	print(' ')
 	os.system('sudo apt-get upgrade')
 
+	drawProgressBar(0.15, 'remove old folders...')
+	print('\n/////////////////////////////////')
+	print('Remove Old Folders......')
+	print('/////////////////////////////////')
+	print(' ')
+	os.system('rm -rf ' + path + '/static/' )
+	os.system('rm -rf ' + path + '/templates/' )
+
 	drawProgressBar(0.2, 'cloning from git')
 	print('\n/////////////////////////////////')
 	print('Cloning Files From Git...')
@@ -134,8 +142,6 @@ def Update():
 	print('/////////////////////////////////')
 	print(' ')
 	drawProgressBar(0.7, 'moving files')
-	os.system('rm -rf ' + path + '/static/' ) #remove old
-	os.system('rm -rf ' + path + '/template/' ) #remove old
 	os.system('mv -v -f ' + path + '/RaspiTwitchONAIR/* ' + path)
 	os.system('rm -rf ' + path + '/RaspiTwitchONAIR/')
 
