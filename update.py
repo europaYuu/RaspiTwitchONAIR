@@ -134,7 +134,7 @@ def Update():
 	print('/////////////////////////////////')
 	print(' ')
 	drawProgressBar(0.7, 'moving files')
-	os.system('mv -v ' + path + '/RaspiTwitchONAIR/* ' + path)
+	os.system('mv -v -f ' + path + '/RaspiTwitchONAIR/* ' + path)
 	os.system('rm -rf ' + path + '/RaspiTwitchONAIR/')
 
 	drawProgressBar(0.8, 'updating dependencies')
