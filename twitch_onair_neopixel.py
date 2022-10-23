@@ -17,9 +17,12 @@ import os
 import requests #For making cURL requests
 import datetime
 import pandas as pd #Simple datetime formatting for checking if tokens are stale
-from bs4 import BeautifulSoup #For parsing HTML (youtube)
 import json
 import time
+
+#Youtube Scraping
+from bs4 import BeautifulSoup
+from googleapiclient.discovery import build
 
 # graphics
 import random
@@ -95,17 +98,18 @@ client_secret = 'CLIENT_SECRET'
 token_stale_age = 30
 
 # default update interval
-update_interval = 30
+update_interval = 600
 
 #streamer to watch
 user_login = 'europayuu'
 
-######## YouTube Channel ID, NOT name
+######## Channel ID, NOT name
 # Test IDs
 # Europa Yuu: UC5Ejf_RIWMVDAjA4B-GV5Zg
 # Amelia Watson: UCyl1z3jo3XHR1riLFKG5UAg (She happened to be online while I was working on this code. Thank you Amelia!)
 # Lofi Girl: UCSJ4gkVC6NrvII8umztf0Ow
-yt_channel_id = 'UC5Ejf_RIWMVDAjA4B-GV5Zg'
+# Nana Asteria: UCJwnGUjoniJA3It-P2snc-A
+yt_channel_id = 'UCSJ4gkVC6NrvII8umztf0Ow'
 
 #default light color when live
 live_color = (255,255,255)
@@ -128,6 +132,8 @@ TARGET_FRAMERATE = 20 # For effects that take a time input
 enable_twitch = True
 
 enable_youtube = False
+
+yt_api_key = 'YT_API_KEY'
 
 # Debug Log. set to True if you want debug file output
 def tryMakeLogDir():
@@ -263,6 +269,7 @@ def tryLoadConfig():
 	global yt_channel_id
 	global enable_twitch
 	global enable_youtube
+	global yt_api_key
 
 	json_read_error = 'Error reading key value. Default key value used for '
 
@@ -351,6 +358,11 @@ def tryLoadConfig():
 					enable_youtube = configData['enable_youtube']
 				except:
 					printLog(json_read_error + 'enable_youtube')
+
+				try:
+					yt_api_key = configData['yt_api_key']
+				except:
+					printLog(json_read_error + 'yt_api_key')
 
 			led_brightness= clamp( (led_brightness * MAX_HARDWARE_BRIGHTNESS), 0, MAX_HARDWARE_BRIGHTNESS )
 			#printLog( 'Brightness set to ' + str(led_brightness) )
@@ -928,47 +940,90 @@ def tw_isLive(user_login):
 	else:
 		return (-2)
 
-# Returns 1 if user_login is online, 0 if user_login is offline, and -1 if there was an error
-def yt_isLive():
+# Returns the current Live Video ID, if available.
+def get_live_video_id():
 	global yt_channel_id
-	printLog("Checking Youtube Channel Live Status...")
 	yt_url = 'https://www.youtube.com/channel/' + yt_channel_id + '/live'
+	result = "none"
 	yt_response_text = requests.get(yt_url).text
 	yt_soup = BeautifulSoup(yt_response_text, 'html.parser')
 	try:
 		yt_soup = str( yt_soup.find("link", {"rel": "canonical"}) ) #Parse the result of our HTML link for elements exclusive to streams that are live
+		printLog('Youtube Video URL Found: ' + yt_soup) #debug
 		if 'watch' in yt_soup:
 			# Online
-			yt_live = 1
+			result = yt_soup.split('watch?v=', 1)[1]
+			result = result.split('" rel', 1)[0]
 		else:
 			# Offline
-			yt_live = 0
+			pass
 	except:
-		# Invalid Channel ID
-		yt_live = -1
+		pass
 
-	return yt_live
+	return result
+
+# Returns 1 if user_login is online, 0 if user_login is offline, and -1 if there was an error
+def yt_isLive():
+	yt_video_id = get_live_video_id()
+
+	if yt_video_id != "none":
+		print( 'Youtube Video ID Found: ' + yt_video_id )
+
+		global yt_api_key
+
+		youtube = build('youtube', 'v3', developerKey=yt_api_key)
+
+		request = youtube.videos().list(
+			part='liveStreamingDetails',
+			id=yt_video_id,
+			)
+
+		try:
+			response = request.execute()
+			viewers = response['items'][0]
+			try: #Online
+				viewers = viewers['liveStreamingDetails']
+				viewers = viewers['concurrentViewers']
+				printLog("Youtube Stream Online. Concurrent Viewers: " + str(viewers))
+				return 1
+			except: #Concurrent Viewers field is missing; Offline
+				printLog("Youtube Stream Offline. Concurrent Viewers Not Available")
+				return 0
+		except: #Incorrect API Key
+			printLog("Youtube Authentication Error: Incorrect API Key")
+			return -1
+
+	else: #no video ID, Offline
+		printLog("Youtube Stream Offline: No Video ID Found")
+		return 0
 
 def isLive(user_login):
 	global enable_twitch
 	global enable_youtube
 	printLog('//// isLive() Youtube: ' + str(enable_youtube) + ' Twitch: ' + str(enable_twitch) + ' ////')
-	tw_live_status = 0
-	yt_live_status = 0
+	global tw_live_status
+	global yt_live_status
 
 	if enable_twitch:
 		tw_live_status = tw_isLive(user_login)
+		# print('tw_live_status:' + str( tw_isLive(user_login) ) )
+	else:
+		tw_live_status = 0
 	if enable_youtube:
+		# print('yt_live_status: ' + str( yt_isLive() ) )
 		yt_live_status = yt_isLive()
+	else:
+		yt_live_status = 0
 
-	if max(tw_live_status, yt_live_status) > 0:
-		return max(tw_live_status, yt_live_status)
-
-	if min(tw_live_status, yt_live_status) < 0:
-		return min(tw_live_status, yt_live_status)
+	if tw_live_status >= 1 or yt_live_status >=  1:
+		return 1
 
 	else:
-		return 0;
+		if tw_live_status < 0 or yt_live_status < 0:
+			return -1
+
+		else:
+			return 0;
 
 ########
 ######## State Machine
@@ -976,6 +1031,8 @@ def isLive(user_login):
 
 live = 0
 previous_live = 0
+tw_live_status = 0
+yt_live_status = 0
 
 ########
 ######## Debug Functions

@@ -24,7 +24,10 @@ os.system('sudo pip3 install adafruit-circuitpython-ssd1306')
 os.system('sudo apt-get -y install i2c-tools')
 os.system('sudo pip3 install rpyc')
 os.system('sudo pip3 install psutil')
+
+# youtube scraping
 os.system('sudo pip3 install beautifulSoup4')
+os.system('sudo pip3 install google-api-python-client')
 
 print('\n/////////////////////////////////')
 print('Cloning Files From Git...')

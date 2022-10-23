@@ -119,7 +119,7 @@ user_login = "europayuu"
 client_id = "<CLIENT_ID>"
 client_secret = "<CLIENT_SECRET>"
 token_stale_age = "30"
-update_interval = "10"
+update_interval = "60"
 num_pixels = "24"
 live_color = "(255,0,0)"
 off_color = "(0,0,0)"
@@ -131,6 +131,7 @@ TARGET_FRAMERATE = 20 # For effects that take a time input
 yt_channel_id = "UC5Ejf_RIWMVDAjA4B-GV5Zg"
 enable_twitch = True
 enable_youtube = False
+yt_api_key = "<YT_API_KEY>"
 
 # Debug Log. set to True if you want debug file output
 def tryMakeLogDir():
@@ -186,12 +187,13 @@ def setDefaults():
     global yt_channel_id
     global enable_twitch
     global enable_youtube
+    global yt_api_key
 
     user_login = "europayuu"
     client_id = "<CLIENT_ID>"
     client_secret = "<CLIENT_SECRET>"
     token_stale_age = "30"
-    update_interval = "10"
+    update_interval = "60"
     num_pixels = "24"
     live_color = "(255,0,0)"
     off_color = "(0,0,0)"
@@ -199,6 +201,7 @@ def setDefaults():
     yt_channel_id = "UC5Ejf_RIWMVDAjA4B-GV5Zg"
     enable_twitch = True
     enable_youtube = False
+    yt_api_key = "<YT_API_KEY>"
 
 ######## DEBUG LOG ########
 if ENABLE_DEBUG_LOG:
@@ -246,6 +249,7 @@ def tryLoadConfig():
     global num_columns
     global enable_twitch
     global enable_youtube
+    global yt_api_key
 
     json_read_error = 'Webserver: Error reading key value. Default key value used for '
 
@@ -335,6 +339,11 @@ def tryLoadConfig():
                 except:
                     printLog(json_read_error + 'enable_youtube')
 
+                try:
+                    yt_api_key = configData['yt_api_key']
+                except:
+                    printLog(json_read_error + 'yt_api_key')
+
                 last_config_file_time = timestamp
 
         else:
@@ -365,7 +374,8 @@ def writeConfig():
         'num_rows': num_rows,
         'num_columns': num_columns,
         'enable_youtube': enable_youtube,
-        'enable_twitch': enable_twitch
+        'enable_twitch': enable_twitch,
+        'yt_api_key': yt_api_key
     }
     with open('config/twitch_onair_config.json', 'w') as outfile:
         json.dump(data, outfile)
@@ -577,6 +587,7 @@ def index():
     global yt_channel_id
     global enable_youtube
     global enable_twitch
+    global yt_api_key
 
     if request.method == 'POST':
         user_login = request.form['user_login'][:30]
@@ -602,9 +613,19 @@ def index():
         else:
             print('No change to POST_secret. client_secret not updated.')
             pass
+
+        # Only update yt_api_key if it's not the server-obfuscated value
+        POST_yt_api_key = request.form['yt_api_key'][:60]
+
+        if POST_yt_api_key != placeholder_secret:
+            print('POST_yt_api_key updated. Updating yt_api_key...')
+            yt_api_key= POST_yt_api_key
+        else:
+            print('No change to POST_yt_api_key. yt_api_key not updated.')
+            pass
         
         token_stale_age = request.form['token_stale_age']
-        update_interval = request.form['update_interval']
+        update_interval = clamp( eval(request.form['update_interval']), 30, eval(request.form['update_interval']))
         num_pixels = request.form['num_pixels'][:9]
         
         led_brightness = request.form['led_brightness']
@@ -656,7 +677,8 @@ def index():
             version=version_local,
             yt_channel_id_value=yt_channel_id,
             enable_youtube_value=boolToCheckbox(enable_youtube),
-            enable_twitch_value=boolToCheckbox(enable_twitch)
+            enable_twitch_value=boolToCheckbox(enable_twitch),
+            yt_api_key_value=placeholder_secret
             )
 
     else:
@@ -690,7 +712,8 @@ def index():
             version=version_local,
             yt_channel_id_value=yt_channel_id,
             enable_youtube_value=boolToCheckbox(enable_youtube),
-            enable_twitch_value=boolToCheckbox(enable_twitch)
+            enable_twitch_value=boolToCheckbox(enable_twitch),
+            yt_api_key_value=placeholder_secret
             )
 
 @app.route('/reset', methods=['GET', 'POST'])
@@ -758,7 +781,8 @@ def killLED():
         version=version_local,
         yt_channel_id_value=yt_channel_id,
         enable_youtube_value=boolToCheckbox(enable_youtube),
-        enable_twitch_value=boolToCheckbox(enable_twitch)
+        enable_twitch_value=boolToCheckbox(enable_twitch),
+        yt_api_key_value=placeholder_secret
         )
 
 @app.route('/deltoken', methods=['GET', 'POST'])
@@ -822,7 +846,8 @@ def doUpdate():
         version=version_local,
         yt_channel_id_value=yt_channel_id,
         enable_youtube_value=boolToCheckbox(enable_youtube),
-        enable_twitch_value=boolToCheckbox(enable_twitch)
+        enable_twitch_value=boolToCheckbox(enable_twitch),
+        yt_api_key_value=placeholder_secret
         )
 
 if __name__ == '__main__':
