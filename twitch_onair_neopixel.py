@@ -109,7 +109,7 @@ user_login = 'europayuu'
 # Amelia Watson: UCyl1z3jo3XHR1riLFKG5UAg (She happened to be online while I was working on this code. Thank you Amelia!)
 # Lofi Girl: UCSJ4gkVC6NrvII8umztf0Ow
 # Nana Asteria: UCJwnGUjoniJA3It-P2snc-A
-yt_channel_id = 'UCSJ4gkVC6NrvII8umztf0Ow'
+yt_channel_id = 'UC5Ejf_RIWMVDAjA4B-GV5Zg'
 
 #default light color when live
 live_color = (255,255,255)
@@ -174,6 +174,8 @@ def tryMakeConfigDir():
 first_loop = True
 last_config_file_time = "-1"
 ASYNC_LED_STATE = 'IDLE'
+tw_live_status = 0
+yt_live_status = 0
 
 ######## DEBUG LOG ########
 if ENABLE_DEBUG_LOG:
@@ -1005,16 +1007,17 @@ def isLive(user_login):
 	global tw_live_status
 	global yt_live_status
 
-	if enable_twitch:
-		tw_live_status = tw_isLive(user_login)
-		# print('tw_live_status:' + str( tw_isLive(user_login) ) )
-	else:
-		tw_live_status = 0
 	if enable_youtube:
 		# print('yt_live_status: ' + str( yt_isLive() ) )
 		yt_live_status = yt_isLive()
 	else:
 		yt_live_status = 0
+
+	if enable_twitch:
+		tw_live_status = tw_isLive(user_login)
+		# print('tw_live_status:' + str( tw_isLive(user_login) ) )
+	else:
+		tw_live_status = 0
 
 	if tw_live_status >= 1 or yt_live_status >=  1:
 		return 1
@@ -1032,8 +1035,8 @@ def isLive(user_login):
 
 live = 0
 previous_live = 0
-tw_live_status = 0
-yt_live_status = 0
+
+time.sleep(5.0)
 
 ########
 ######## Debug Functions
@@ -1105,7 +1108,8 @@ class LaunchOLED(Thread):
 		os.system('sudo python3 /home/pi/oled.py')
 
 pixelStart()
-
+pixelFlood(off_color)
+time.sleep(3.0)
 tryOLedMessage('Neopixels Started')
 
 ########

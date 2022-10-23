@@ -249,6 +249,7 @@ def tryLoadConfig():
     global num_columns
     global enable_twitch
     global enable_youtube
+    global yt_channel_id
     global yt_api_key
 
     json_read_error = 'Webserver: Error reading key value. Default key value used for '
